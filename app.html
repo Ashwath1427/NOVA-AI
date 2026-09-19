@@ -375,7 +375,7 @@
         <div class="ai-orb" title="NOVA AI Core"></div>
         <div class="ai-prompt-content">
           <div class="ai-input-box">
-            <input type="text" id="overviewAiInput" placeholder="Ask NOVA anything..." onkeydown="if(event.key==='Enter') window.novaOverview?.askNova(this.value)">
+            <input type="text" id="overviewAiInput" name="nova_ai_query_overview" autocomplete="off" spellcheck="false" placeholder="Ask NOVA anything..." onkeydown="if(event.key==='Enter') window.novaOverview?.askNova(this.value)">
             <button class="ai-submit-btn" onclick="window.novaOverview?.askNova(document.getElementById('overviewAiInput').value)"><i data-lucide="arrow-right" style="width:16px;height:16px;"></i></button>
           </div>
           <div class="quick-chips-row">
@@ -458,7 +458,7 @@
         <div class="ai-orb" style="width:84px; height:84px; min-width:84px;"></div>
         <div class="ai-prompt-content" style="gap:16px;">
           <div class="ai-input-box" style="padding: 6px 8px 6px 20px;">
-            <input type="text" id="aiCommandPageInput" placeholder="Ask NOVA anything..." onkeydown="if(event.key==='Enter') window.novaAI?.openAndSend(this.value)">
+            <input type="text" id="aiCommandPageInput" name="nova_ai_query_command" autocomplete="off" spellcheck="false" placeholder="Ask NOVA anything..." onkeydown="if(event.key==='Enter') window.novaAI?.openAndSend(this.value)">
             <button class="ai-submit-btn" style="width:40px; height:40px;" onclick="window.novaAI?.openAndSend(document.getElementById('aiCommandPageInput').value)"><i data-lucide="arrow-right"></i></button>
           </div>
           <div class="quick-chips-row">

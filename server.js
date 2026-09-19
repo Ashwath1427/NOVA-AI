@@ -155,7 +155,7 @@ app.get('/api/integrations/auth-url', async (req, res) => {
         provider: 'spotify'
       });
 
-      const redirectUri = userCreds.redirectUri || process.env.SPOTIFY_REDIRECT_URI || 'http://127.0.0.1:3000/spotify-callback';
+      const redirectUri = `${req.protocol}://${req.get('host')}/api/integrations/spotify/callback`;
       const url = spotify.getAuthUrl({
         clientId,
         state,
@@ -178,7 +178,7 @@ app.get('/api/integrations/auth-url', async (req, res) => {
           error: "Discord Application / Client ID is not configured. Please add it in the API Credentials tab."
         });
       }
-      const discordRedirect = userDiscord.redirectUri || process.env.DISCORD_REDIRECT_URI || 'http://127.0.0.1:3000/discord-callback';
+      const discordRedirect = `${req.protocol}://${req.get('host')}/api/integrations/discord/callback`;
       const url = discord.getAuthUrl({ clientId: dcClientId, redirectUri: discordRedirect, state });
       return res.json({ configured: true, url, clientId: dcClientId });
     }
@@ -267,7 +267,7 @@ async function handleSpotifyCallback(req, res) {
 
   try {
     const userSpotify = integrationsStore.getUserCredentials(session.userId, 'spotify');
-    const redirectUri = userSpotify.redirectUri || process.env.SPOTIFY_REDIRECT_URI || 'http://127.0.0.1:3000/spotify-callback';
+    const redirectUri = `${req.protocol}://${req.get('host')}/api/integrations/spotify/callback`;
     const tokens = await spotify.exchangePkceCodeForTokens({
       clientId: session.clientId || userSpotify.clientId,
       clientSecret: session.clientSecret || userSpotify.clientSecret,
@@ -321,7 +321,7 @@ async function handleDiscordCallback(req, res) {
 
   try {
     const userDiscord = integrationsStore.getUserCredentials(userId, 'discord');
-    const redirectUri = userDiscord.redirectUri || process.env.DISCORD_REDIRECT_URI || 'http://127.0.0.1:3000/discord-callback';
+    const redirectUri = `${req.protocol}://${req.get('host')}/api/integrations/discord/callback`;
     const tokens = await discord.exchangeCodeForTokens({
       clientId: userDiscord.clientId || process.env.DISCORD_CLIENT_ID,
       clientSecret: userDiscord.clientSecret || process.env.DISCORD_CLIENT_SECRET,
@@ -518,7 +518,7 @@ app.post('/api/integrations/set-credentials', async (req, res) => {
 
   let authUrl = null;
   if (provider === 'discord' && discord.isConfigured()) {
-    const discordRedirect = process.env.DISCORD_REDIRECT_URI || 'http://127.0.0.1:3000/discord-callback';
+    const discordRedirect = `${req.protocol}://${req.get('host')}/api/integrations/discord/callback`;
     const oauthState = JSON.stringify({ userId: user.id, provider: 'discord' });
     authUrl = discord.getAuthUrl({ redirectUri: discordRedirect, state: oauthState });
   }

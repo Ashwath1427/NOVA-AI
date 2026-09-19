@@ -131,7 +131,7 @@ app.get('/api/integrations/auth-url', async (req, res) => {
       return res.json({ configured: true, url });
     }
     else if (provider === 'spotify') {
-      const userCreds = integrationsStore.getUserCredentials(user.id, 'spotify');
+      const userCreds = await integrationsStore.getUserCredentials(user.id, 'spotify');
       const clientId = userCreds.clientId || process.env.SPOTIFY_CLIENT_ID;
       if (!clientId) {
         return res.json({
@@ -171,7 +171,7 @@ app.get('/api/integrations/auth-url', async (req, res) => {
       });
     }
     else if (provider === 'discord') {
-      const userDiscord = integrationsStore.getUserCredentials(user.id, 'discord');
+      const userDiscord = await integrationsStore.getUserCredentials(user.id, 'discord');
       const dcClientId = userDiscord.clientId || process.env.DISCORD_CLIENT_ID;
       if (!dcClientId) {
         return res.json({
@@ -184,7 +184,7 @@ app.get('/api/integrations/auth-url', async (req, res) => {
       return res.json({ configured: true, url, clientId: dcClientId });
     }
     else if (provider === 'instagram') {
-      const userIg = integrationsStore.getUserCredentials(user.id, 'instagram');
+      const userIg = await integrationsStore.getUserCredentials(user.id, 'instagram');
       const igId = userIg.clientId || process.env.INSTAGRAM_CLIENT_ID;
       if (!igId) {
         return res.json({ configured: false, error: "INSTAGRAM_CLIENT_ID is not configured. Please add it in the API Credentials tab." });
@@ -267,7 +267,7 @@ async function handleSpotifyCallback(req, res) {
   }
 
   try {
-    const userSpotify = integrationsStore.getUserCredentials(session.userId, 'spotify');
+    const userSpotify = await integrationsStore.getUserCredentials(session.userId, 'spotify');
     const redirectUri = `${req.protocol}://${req.get('host')}/api/integrations/spotify/callback`;
     const tokens = await spotify.exchangePkceCodeForTokens({
       clientId: session.clientId || userSpotify.clientId,
@@ -322,7 +322,7 @@ async function handleDiscordCallback(req, res) {
   }
 
   try {
-    const userDiscord = integrationsStore.getUserCredentials(userId, 'discord');
+    const userDiscord = await integrationsStore.getUserCredentials(userId, 'discord');
     const redirectUri = `${req.protocol}://${req.get('host')}/api/integrations/discord/callback`;
     const tokens = await discord.exchangeCodeForTokens({
       clientId: userDiscord.clientId || process.env.DISCORD_CLIENT_ID,
@@ -411,7 +411,7 @@ app.get('/api/integrations/app-config', async (req, res) => {
       if (data?.user) userId = data.user.id;
     } catch (e) {}
   }
-  const creds = integrationsStore.getAllUserCredentials(userId);
+  const creds = await integrationsStore.getAllUserCredentials(userId, `${req.protocol}://${req.get('host')}`);
   res.json({
     success: true,
     config: creds,
@@ -429,7 +429,7 @@ app.get('/api/integrations/user-credentials', async (req, res) => {
       if (data?.user) userId = data.user.id;
     } catch (e) {}
   }
-  const creds = integrationsStore.getAllUserCredentials(userId);
+  const creds = await integrationsStore.getAllUserCredentials(userId, `${req.protocol}://${req.get('host')}`);
   res.json({
     success: true,
     credentials: creds
@@ -471,7 +471,7 @@ app.post('/api/integrations/set-credentials', async (req, res) => {
   }
 
   // Save into per-user persistent credentials store
-  const savedCreds = integrationsStore.saveUserCredentials(user.id, provider, {
+  const savedCreds = await integrationsStore.saveUserCredentials(user.id, provider, {
     clientId,
     clientSecret,
     botToken,
@@ -526,7 +526,7 @@ app.post('/api/integrations/set-credentials', async (req, res) => {
     authUrl = discord.getAuthUrl({ redirectUri: discordRedirect, state: oauthState });
   }
 
-  const updatedConfig = integrationsStore.getAllUserCredentials(user.id);
+  const updatedConfig = await integrationsStore.getAllUserCredentials(user.id, `${req.protocol}://${req.get('host')}`);
 
   res.json({
     success: true,

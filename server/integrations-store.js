@@ -179,9 +179,25 @@ export class IntegrationsStore {
   }
 
   /**
-   * Reads stored credentials for a user and provider (falls back to default_user, then process.env)
+   * Reads stored credentials for a user and provider from Supabase (falls back to process.env)
    */
-  getUserCredentials(userId, provider) {
+  async getUserCredentials(userId, provider) {
+    try {
+      if (this.supabase && userId) {
+        const { data, error } = await this.supabase
+          .from('user_dev_credentials')
+          .select('credentials')
+          .eq('user_id', userId)
+          .eq('provider', provider)
+          .single();
+        if (!error && data && data.credentials) {
+          return data.credentials;
+        }
+      }
+    } catch (e) {
+      console.warn("Could not read user credentials from Supabase:", e.message);
+    }
+    // Fallback: try local JSON file (for local dev)
     try {
       if (fs.existsSync(USER_CREDS_FILE)) {
         const raw = fs.readFileSync(USER_CREDS_FILE, 'utf-8');
@@ -192,15 +208,52 @@ export class IntegrationsStore {
         if (defaultCreds) return defaultCreds;
       }
     } catch (e) {
-      console.warn("Could not read user credentials:", e.message);
+      console.warn("Could not read user credentials file:", e.message);
     }
     return {};
   }
 
   /**
-   * Saves credentials specifically for this user into persistent storage
+   * Saves credentials specifically for this user into Supabase (and local file as fallback)
    */
-  saveUserCredentials(userId, provider, creds = {}) {
+  async saveUserCredentials(userId, provider, creds = {}) {
+    // Clean the creds - remove masked/empty values
+    const cleanCreds = {};
+    for (const [k, val] of Object.entries(creds)) {
+      if (val !== undefined && val !== null && val !== '' && !String(val).startsWith('••••')) {
+        cleanCreds[k] = String(val).trim();
+      }
+    }
+
+    // Save to Supabase
+    try {
+      if (this.supabase && userId && userId !== 'default_user') {
+        // First get existing credentials to merge
+        const { data: existing } = await this.supabase
+          .from('user_dev_credentials')
+          .select('credentials')
+          .eq('user_id', userId)
+          .eq('provider', provider)
+          .single();
+
+        const mergedCreds = { ...(existing?.credentials || {}), ...cleanCreds };
+
+        await this.supabase
+          .from('user_dev_credentials')
+          .upsert({
+            user_id: userId,
+            provider,
+            credentials: mergedCreds,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'user_id,provider' });
+
+        return mergedCreds;
+      }
+    } catch (e) {
+      console.warn("Could not save user credentials to Supabase:", e.message);
+    }
+
+    // Fallback: save to local JSON file (for local dev)
     try {
       if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
       let all = {};
@@ -213,23 +266,13 @@ export class IntegrationsStore {
       if (!all[key]) all[key] = {};
       if (!all[key][provider]) all[key][provider] = {};
 
-      for (const [k, val] of Object.entries(creds)) {
-        if (val !== undefined && val !== null && val !== '' && !String(val).startsWith('••••')) {
-          all[key][provider][k] = String(val).trim();
-        }
+      for (const [k, val] of Object.entries(cleanCreds)) {
+        all[key][provider][k] = val;
       }
       fs.writeFileSync(USER_CREDS_FILE, JSON.stringify(all, null, 2), 'utf-8');
-
-      // Also mirror to default_user for dev convenience
-      if (key !== 'default_user') {
-        if (!all['default_user']) all['default_user'] = {};
-        all['default_user'][provider] = { ...(all['default_user'][provider] || {}), ...all[key][provider] };
-        fs.writeFileSync(USER_CREDS_FILE, JSON.stringify(all, null, 2), 'utf-8');
-      }
-
       return all[key][provider];
     } catch (e) {
-      console.warn("Could not save user credentials:", e.message);
+      console.warn("Could not save user credentials to file:", e.message);
       return {};
     }
   }
@@ -237,15 +280,35 @@ export class IntegrationsStore {
   /**
    * Returns all credentials for the UI with secrets properly masked
    */
-  getAllUserCredentials(userId) {
-    let fileData = {};
-    try {
-      if (fs.existsSync(USER_CREDS_FILE)) {
-        fileData = JSON.parse(fs.readFileSync(USER_CREDS_FILE, 'utf-8') || '{}');
-      }
-    } catch (e) {}
+  async getAllUserCredentials(userId, baseUrl = '') {
+    let uCreds = {};
 
-    const uCreds = (userId && fileData[userId]) ? fileData[userId] : (fileData['default_user'] || {});
+    // Try Supabase first (production)
+    try {
+      if (this.supabase && userId) {
+        const { data, error } = await this.supabase
+          .from('user_dev_credentials')
+          .select('provider, credentials')
+          .eq('user_id', userId);
+        if (!error && data && data.length > 0) {
+          for (const row of data) {
+            uCreds[row.provider] = row.credentials || {};
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("Could not load dev credentials from Supabase:", e.message);
+    }
+
+    // Fallback: local JSON file (for local dev)
+    if (Object.keys(uCreds).length === 0) {
+      try {
+        if (fs.existsSync(USER_CREDS_FILE)) {
+          const fileData = JSON.parse(fs.readFileSync(USER_CREDS_FILE, 'utf-8') || '{}');
+          uCreds = (userId && fileData[userId]) ? fileData[userId] : (fileData['default_user'] || {});
+        }
+      } catch (e) {}
+    }
 
     // Spotify
     const sp = uCreds.spotify || {};
@@ -273,13 +336,18 @@ export class IntegrationsStore {
     const igClientId = ig.clientId || process.env.INSTAGRAM_CLIENT_ID || '';
     const igSecret = ig.clientSecret || process.env.INSTAGRAM_CLIENT_SECRET || '';
 
+    // Dynamic redirect URIs based on the current host
+    const spotifyRedirect = baseUrl ? `${baseUrl}/api/integrations/spotify/callback` : 'http://127.0.0.1:3000/api/integrations/spotify/callback';
+    const discordRedirect = baseUrl ? `${baseUrl}/api/integrations/discord/callback` : 'http://127.0.0.1:3000/api/integrations/discord/callback';
+    const googleRedirect = baseUrl ? `${baseUrl}/api/auth/google/callback` : 'http://localhost:3000/api/auth/google/callback';
+
     return {
       spotify: {
         configured: !!spClientId,
         clientId: spClientId,
         hasSecret: !!spClientSecret,
         maskedSecret: maskSecret(spClientSecret),
-        redirectUri: sp.redirectUri || process.env.SPOTIFY_REDIRECT_URI || 'http://127.0.0.1:3000/spotify-callback'
+        redirectUri: spotifyRedirect
       },
       discord: {
         configured: !!dcClientId,
@@ -288,7 +356,7 @@ export class IntegrationsStore {
         maskedSecret: maskSecret(dcSecret),
         hasBotToken: !!dcBotToken,
         maskedBotToken: maskSecret(dcBotToken),
-        redirectUri: dc.redirectUri || process.env.DISCORD_REDIRECT_URI || 'http://127.0.0.1:3000/discord-callback'
+        redirectUri: discordRedirect
       },
       gemini: {
         configured: !!gmKey,
@@ -301,14 +369,14 @@ export class IntegrationsStore {
         hasSecret: !!gcSecret,
         maskedSecret: maskSecret(gcSecret),
         icalUrl: gcIcal,
-        redirectUri: 'http://localhost:3000/api/auth/google/callback'
+        redirectUri: googleRedirect
       },
       instagram: {
         configured: !!igClientId,
         clientId: igClientId,
         hasSecret: !!igSecret,
         maskedSecret: maskSecret(igSecret),
-        redirectUri: 'http://127.0.0.1:3000/instagram-callback'
+        redirectUri: baseUrl ? `${baseUrl}/instagram-callback` : 'http://127.0.0.1:3000/instagram-callback'
       }
     };
   }

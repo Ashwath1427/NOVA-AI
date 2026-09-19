@@ -52,11 +52,14 @@ async function authenticateUser(req, res) {
     }
 
     // Check if account is deactivated
-    const { data: sub } = await supabaseAdmin
+    const { data: subs } = await supabaseAdmin
       .from('subscriptions')
       .select('status')
       .eq('user_id', user.id)
-      .single();
+      .order('created_at', { ascending: false })
+      .limit(1);
+      
+    const sub = subs && subs.length > 0 ? subs[0] : null;
     if (sub && sub.status === 'deactivated') {
       res.status(403).json({ error: "Your account has been deactivated. Please contact support." });
       return null;

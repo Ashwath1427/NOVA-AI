@@ -50,6 +50,18 @@ async function authenticateUser(req, res) {
       res.status(401).json({ error: "Unauthorized: " + (error?.message || "Invalid session") });
       return null;
     }
+
+    // Check if account is deactivated
+    const { data: sub } = await supabaseAdmin
+      .from('subscriptions')
+      .select('status')
+      .eq('user_id', user.id)
+      .single();
+    if (sub && sub.status === 'deactivated') {
+      res.status(403).json({ error: "Your account has been deactivated. Please contact support." });
+      return null;
+    }
+
     req.user = user;
     req.supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       global: { headers: { Authorization: `Bearer ${token}` } }

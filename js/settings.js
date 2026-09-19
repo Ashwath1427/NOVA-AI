@@ -142,6 +142,13 @@ window.novaSettings = {
       const res = await fetch('/api/subscription', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
+      if (res.status === 403) {
+        const errData = await res.json();
+        alert(errData.error || 'Your account has been deactivated. Please contact support.');
+        await window.supabaseClient.auth.signOut();
+        window.location.href = '/login.html';
+        return;
+      }
       const data = await res.json();
       if (data.success && data.plan) {
         window.currentPlan = data.plan;

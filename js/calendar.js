@@ -8,6 +8,13 @@ window.novaCalendar = {
       if (window.supabaseClient) {
         const now = new Date();
         
+        // First, clean up any old Google Calendar events from the database
+        // They should only come from the live iCal feed, not stored copies
+        await window.supabaseClient
+          .from('calendar_events')
+          .delete()
+          .eq('source', 'Google Calendar');
+
         const { data, error } = await window.supabaseClient
           .from('calendar_events')
           .select('*')

@@ -21,3 +21,28 @@ if (supabaseUrl !== 'YOUR_SUPABASE_URL_HERE' && supabaseUrl.includes('supabase.c
 }
 
 window.supabaseClient = supabaseInstance;
+
+// Global deactivation check on page load
+(async function checkDeactivation() {
+  if (window.location.pathname.includes('login.html')) return;
+  try {
+    const { data: { session } } = await window.supabaseClient.auth.getSession();
+    if (session) {
+      const { data: subs } = await window.supabaseClient
+        .from('subscriptions')
+        .select('status')
+        .eq('user_id', session.user.id)
+        .order('created_at', { ascending: false })
+        .limit(1);
+        
+      const sub = subs && subs.length > 0 ? subs[0] : null;
+      if (sub && sub.status === 'deactivated') {
+        alert('Your account has been deactivated. Please contact support.');
+        await window.supabaseClient.auth.signOut();
+        window.location.href = '/login.html';
+      }
+    }
+  } catch (err) {
+    console.warn("Could not check deactivation status:", err);
+  }
+})();

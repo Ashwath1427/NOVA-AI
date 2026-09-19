@@ -21,6 +21,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+app.set('trust proxy', 1);
 app.use(cors());
 app.use(express.json());
 app.use(express.static(__dirname));
@@ -297,6 +298,7 @@ async function handleSpotifyCallback(req, res) {
 
 app.get('/spotify-callback', handleSpotifyCallback);
 app.get('/api/auth/spotify/callback', handleSpotifyCallback);
+app.get('/api/integrations/spotify/callback', handleSpotifyCallback);
 
 // 3.6 Discord OAuth2 Callback Handler (http://127.0.0.1:3000/discord-callback)
 async function handleDiscordCallback(req, res) {
@@ -350,6 +352,7 @@ async function handleDiscordCallback(req, res) {
 
 app.get('/discord-callback', handleDiscordCallback);
 app.get('/api/auth/discord/callback', handleDiscordCallback);
+app.get('/api/integrations/discord/callback', handleDiscordCallback);
 
 // 4. Connect Private iCal Feed URL for Google Calendar
 app.post('/api/integrations/connect-ical', async (req, res) => {

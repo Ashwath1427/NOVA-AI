@@ -108,8 +108,8 @@ export class EntitlementsService {
     return { plan: data.plan, details: PLANS[data.plan] };
   }
 
-  async checkFeature(userId, featureKey) {
-    const { details } = await this.getUserPlan(userId);
+  async checkFeature(userId, featureKey, authClient = null) {
+    const { details } = await this.getUserPlan(userId, authClient);
     return details.features[featureKey] === true;
   }
 

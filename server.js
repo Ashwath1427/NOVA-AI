@@ -102,7 +102,7 @@ app.get('/api/integrations/auth-url', async (req, res) => {
   const state = JSON.stringify({ userId: user.id, provider });
 
   try {
-    const hasFeature = await entitlementsService.checkFeature(user.id, provider);
+    const hasFeature = await entitlementsService.checkFeature(user.id, provider, req.supabase);
     if (!hasFeature) {
       return res.json({ configured: false, error: `The ${provider} integration is not available on your current plan.` });
     }

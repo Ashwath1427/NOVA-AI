@@ -1,0 +1,52 @@
+/* responsive.css */
+@media (max-width: 1024px) {
+  .task-board {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .task-board {
+    grid-template-columns: 1fr;
+  }
+  
+  .view-container {
+    padding: 16px;
+  }
+  
+  .topbar {
+    padding: 0 16px;
+  }
+  
+  .filters-bar {
+    flex-direction: column;
+  }
+  
+  .hero-title {
+    font-size: 2.5rem;
+  }
+  
+  .command-palette-modal {
+    margin: 16px;
+    width: auto;
+  }
+  
+  .projects-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .notes-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .ai-chat-window {
+    max-width: 100%;
+    height: 100vh;
+    border-radius: 0;
+  }
+  
+  #aiChatOverlay {
+    padding: 0;
+    align-items: flex-start;
+  }
+}

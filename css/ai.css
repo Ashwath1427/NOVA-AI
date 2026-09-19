@@ -1,0 +1,70 @@
+/* ai.css */
+.ai-chat-window {
+  width: 100%;
+  max-width: 400px;
+  height: 600px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  pointer-events: auto; /* Since overlay has pointer-events: none potentially, need this to be clickable */
+}
+
+.ai-msg, .user-msg, .sys-msg {
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  font-size: 0.95rem;
+  line-height: 1.4;
+  word-wrap: break-word;
+}
+
+.ai-msg {
+  background: rgba(124, 58, 237, 0.1);
+  border-left: 2px solid var(--accent-primary);
+  align-self: flex-start;
+  color: var(--text-primary);
+}
+
+.user-msg {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-highlight);
+  align-self: flex-end;
+  color: var(--text-primary);
+  border-radius: var(--radius-md) var(--radius-md) 0 var(--radius-md);
+}
+
+.sys-msg {
+  background: transparent;
+  color: var(--text-muted);
+  align-self: center;
+  font-size: 0.8rem;
+  text-align: center;
+  margin: 8px 0;
+}
+
+.typing-indicator {
+  display: flex;
+  gap: 4px;
+  padding: 12px 16px;
+  align-self: flex-start;
+  background: rgba(124, 58, 237, 0.1);
+  border-left: 2px solid var(--accent-primary);
+  border-radius: var(--radius-md) var(--radius-md) var(--radius-md) 0;
+}
+
+.typing-indicator span {
+  width: 6px;
+  height: 6px;
+  background: var(--accent-primary);
+  border-radius: 50%;
+  animation: bounce 1.4s infinite ease-in-out both;
+}
+
+.typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+.typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes bounce {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1); }
+}

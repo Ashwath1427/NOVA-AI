@@ -1,0 +1,9 @@
+{
+  "tasks": {
+    "start": "deno run --allow-net --allow-env index.ts"
+  },
+  "imports": {
+    "supabase": "https://esm.sh/@supabase/supabase-js@2.39.3",
+    "cors": "https://deno.land/x/edge_cors@v0.2.6/mod.ts"
+  }
+}

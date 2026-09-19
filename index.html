@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NOVA — AI Personal Command Center</title>
+  <meta name="description" content="Plan your day, organize your projects, and let AI turn your intentions into action.">
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- CSS -->
+  <link rel="stylesheet" href="/css/global.css">
+  <link rel="stylesheet" href="/css/landing.css">
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="glass-panel navbar">
+    <div class="nav-container">
+      <div class="brand">
+        <img src="/assets/logo.svg" alt="NOVA Logo" height="32">
+      </div>
+      <div class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#how-it-works">How it Works</a>
+        <a href="/login.html" class="btn btn-outline">Log in</a>
+        <a href="/login.html" class="btn btn-primary">Get Started</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <header class="hero">
+    <div class="hero-content">
+      <div class="badge glass-panel">✨ Introducing NOVA 1.0</div>
+      <h1 class="hero-title">Your day. Your projects.<br><span class="text-accent-gradient">One intelligent command center.</span></h1>
+      <p class="hero-subtitle">Plan your day, organize your projects, and let AI turn your intentions into action.</p>
+      <div class="hero-cta">
+        <a href="/login.html" class="btn btn-primary btn-large">Get Started</a>
+        <a href="#demo" class="btn btn-outline btn-large">See How It Works</a>
+      </div>
+    </div>
+    
+    <!-- Hero Mockup graphic -->
+    <div class="hero-mockup glass-panel-elevated">
+      <div class="mockup-header">
+        <span class="dot red"></span>
+        <span class="dot yellow"></span>
+        <span class="dot green"></span>
+      </div>
+      <div class="mockup-body">
+        <div class="mockup-sidebar">
+          <div class="mockup-nav-item skeleton"></div>
+          <div class="mockup-nav-item skeleton"></div>
+          <div class="mockup-nav-item skeleton"></div>
+        </div>
+        <div class="mockup-content">
+          <div class="ai-chat-preview glass-panel">
+            <p class="ai-msg"><span class="text-accent-gradient">NOVA:</span> Good evening. You have 3 important tasks and 1 project deadline tomorrow. What should we focus on?</p>
+            <p class="user-msg">I have 2 hours. What should I work on?</p>
+            <p class="ai-msg"><span class="text-accent-gradient">NOVA:</span> I suggest Mathematics revision (45 min) followed by testing your app (45 min). I've scheduled this in your planner.</p>
+          </div>
+          <div class="mockup-cards">
+            <div class="mockup-card glass-panel skeleton-container">
+              <div class="skeleton-line w-50"></div>
+              <div class="skeleton-line w-100"></div>
+              <div class="skeleton-line w-75"></div>
+            </div>
+            <div class="mockup-card glass-panel skeleton-container">
+              <div class="skeleton-line w-50"></div>
+              <div class="skeleton-line w-100"></div>
+              <div class="skeleton-line w-75"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Features Section -->
+  <section id="features" class="features-section">
+    <div class="section-header">
+      <h2>Everything you need, <span class="text-accent-gradient">orchestrated by AI</span></h2>
+      <p class="text-secondary">Stop jumping between apps. NOVA brings your tasks, projects, calendar, and notes into one cohesive system.</p>
+    </div>
+    
+    <div class="features-grid">
+      <div class="feature-card glass-panel">
+        <div class="feature-icon">✓</div>
+        <h3>Smart Tasks</h3>
+        <p class="text-muted">Create tasks using natural language. "Remind me to review the presentation tomorrow at 9 AM."</p>
+      </div>
+      <div class="feature-card glass-panel">
+        <div class="feature-icon">◈</div>
+        <h3>Project Breakdown</h3>
+        <p class="text-muted">Overwhelmed by a new project? Ask NOVA to break it down into actionable tasks automatically.</p>
+      </div>
+      <div class="feature-card glass-panel">
+        <div class="feature-icon">▣</div>
+        <h3>Dynamic Daily Planner</h3>
+        <p class="text-muted">Tell NOVA how much time you have, and get a realistic schedule balancing your priorities.</p>
+      </div>
+      <div class="feature-card glass-panel">
+        <div class="feature-icon">◷</div>
+        <h3>Weekly Reviews</h3>
+        <p class="text-muted">Get an AI-generated summary of your accomplishments, overdue tasks, and habit consistency every week.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="footer-content">
+      <div class="brand">
+        <img src="/assets/logo.svg" alt="NOVA Logo" height="24">
+      </div>
+      <p class="text-muted">&copy; 2026 NOVA Command Center. All rights reserved.</p>
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,1845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - NOVA</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <link rel="stylesheet" href="/css/global.css">
+  <link rel="stylesheet" href="/css/responsive.css">
+  <link rel="stylesheet" href="/css/app.css">
+  <link rel="stylesheet" href="/css/ai.css">
+  <link rel="stylesheet" href="/css/tasks.css">
+  <link rel="stylesheet" href="/css/projects.css">
+  <link rel="stylesheet" href="/css/notes.css">
+  <link rel="stylesheet" href="/css/habits.css">
+  <link rel="stylesheet" href="/css/calendar.css">
+</head>
+<body>
+
+  <!-- App Container -->
+  <div class="app-layout">
+    
+    <!-- Sidebar -->
+    <aside class="sidebar glass-panel">
+      <div class="sidebar-header">
+        <img src="/assets/logo.svg" alt="NOVA Logo" height="24">
+      </div>
+      
+      <nav class="sidebar-nav">
+        <a href="#overview" class="nav-item active" data-route="overview">
+          <i data-lucide="home"></i> Overview
+        </a>
+        <a href="#tasks" class="nav-item" data-route="tasks">
+          <i data-lucide="check-square"></i> Tasks
+        </a>
+        <a href="#projects" class="nav-item" data-route="projects">
+          <i data-lucide="folder"></i> Projects
+        </a>
+        <a href="#planner" class="nav-item" data-route="planner">
+          <i data-lucide="layout-dashboard"></i> Planner
+        </a>
+        <a href="#calendar" class="nav-item" data-route="calendar">
+          <i data-lucide="calendar"></i> Calendar
+        </a>
+        <a href="#notes" class="nav-item" data-route="notes">
+          <i data-lucide="file-text"></i> Notes
+        </a>
+        <a href="#habits" class="nav-item" data-route="habits">
+          <i data-lucide="activity"></i> Habits
+        </a>
+        <a href="#ai-command" class="nav-item" data-route="ai-command">
+          <i data-lucide="sparkles"></i> AI Command
+        </a>
+        <a href="#setup-guide" class="nav-item" data-route="setup-guide">
+          <i data-lucide="book-open"></i> Setup Guide
+        </a>
+
+      </nav>
+
+      <div class="sidebar-footer">
+        <a href="#settings" class="nav-item" data-route="settings">
+          <i data-lucide="settings"></i> Settings
+        </a>
+        <div class="user-profile">
+          <div class="avatar" id="userAvatar">A</div>
+          <div class="user-info">
+            <span class="user-name" id="userName">Ashwath</span>
+            <button id="logoutBtn" class="logout-btn">Log out</button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      
+      <!-- Topbar / Search bar matching mockup -->
+      <header class="topbar glass-panel" style="display:flex; justify-content:space-between; align-items:center; padding: 0 32px;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <button id="sidebarToggleBtn" class="btn" style="background:transparent; padding:6px; color:var(--text-secondary);"><i data-lucide="menu" style="width:18px;height:18px;"></i></button>
+        </div>
+        <div class="command-input-wrapper" style="max-width:480px; margin:0 auto;">
+          <i data-lucide="search" class="ai-icon" style="color:var(--text-muted); width:16px; height:16px;"></i>
+          <input type="text" id="aiCommandInput" placeholder="Search anything... (Cmd/Ctrl + K)" autocomplete="off">
+          <div class="shortcut-hint">⌘K</div>
+        </div>
+        <div style="display:flex; align-items:center; gap:16px;">
+          <button id="topbarNotificationBtn" class="btn" style="background:transparent; padding:6px; color:var(--text-secondary); position:relative;" title="Notifications">
+            <i data-lucide="bell" style="width:18px; height:18px;"></i>
+            <span style="position:absolute; top:4px; right:4px; width:6px; height:6px; border-radius:50%; background:#ef4444;"></span>
+          </button>
+          <div class="avatar" id="topbarAvatar" style="width:34px; height:34px; font-size:0.85rem; cursor:pointer;" onclick="window.location.hash='#settings'; document.querySelector('[data-route=settings]')?.click();">A</div>
+        </div>
+      </header>
+
+      <!-- Dynamic Views Container -->
+      <div id="viewContainer" class="view-container">
+        <!-- Views will be injected here by router.js -->
+      </div>
+      
+    </main>
+
+  </div>
+
+  <!-- Command Palette Modal (Hidden by default) -->
+  <div id="commandPalette" class="modal-overlay hidden">
+    <div class="command-palette-modal glass-panel-elevated">
+      <div class="cmd-input-area">
+        <i data-lucide="search"></i>
+        <input type="text" id="cmdInput" placeholder="Search or type a command...">
+      </div>
+      <div class="cmd-results">
+        <div class="cmd-group">
+          <div class="cmd-group-title">Suggested</div>
+          <div class="cmd-item">Plan my day</div>
+          <div class="cmd-item">What should I work on now?</div>
+          <div class="cmd-item">Create a project</div>
+          <div class="cmd-item">Show overdue tasks</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- AI Chat Overlay -->
+  <div id="aiChatOverlay" class="modal-overlay hidden" style="z-index: 999; justify-content: flex-end; align-items: flex-end; padding: 24px;">
+    <div class="ai-chat-window glass-panel-elevated">
+      <div class="ai-chat-header flex-between" style="padding: 16px; border-bottom: 1px solid var(--border-color);">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <i data-lucide="sparkles" class="text-accent-gradient"></i>
+          <span style="font-weight:600;">NOVA Assistant</span>
+        </div>
+        <button id="closeAiChatBtn" class="btn" style="background:transparent; padding:4px;"><i data-lucide="x"></i></button>
+      </div>
+      <div id="aiChatMessages" class="ai-chat-messages" style="flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:16px;">
+        <div class="ai-msg">Hi. How can I help you today?</div>
+      </div>
+      <div class="ai-chat-input-area" style="padding:16px; border-top: 1px solid var(--border-color);">
+        <form id="aiChatForm" style="display:flex; gap:8px;">
+          <input type="text" id="aiChatInput" placeholder="Ask NOVA..." style="flex:1; padding:12px; border-radius:var(--radius-full); background:rgba(0,0,0,0.3); border:1px solid var(--border-color); color:white;">
+          <button type="submit" class="btn btn-primary" style="border-radius:50%; width:44px; height:44px; padding:0; display:flex; align-items:center; justify-content:center;"><i data-lucide="send" style="width:18px;height:18px;"></i></button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Generic CRUD Modal -->
+  <div id="crudModal" class="modal-overlay hidden" style="z-index: 1000;">
+    <div class="glass-panel-elevated" style="max-width: 500px; width: 100%;">
+      <div class="flex-between" style="padding: 16px; border-bottom: 1px solid var(--border-color);">
+        <h3 id="crudModalTitle" style="margin: 0; font-size: 1.25rem;">Create</h3>
+        <button id="crudModalCloseBtn" class="btn" style="background:transparent; padding:4px;"><i data-lucide="x"></i></button>
+      </div>
+      <form id="crudModalForm" style="padding: 24px; display: flex; flex-direction: column; gap: 16px;">
+        <div id="crudModalFields" style="display: flex; flex-direction: column; gap: 16px;"></div>
+        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 8px;">
+          <button type="button" class="btn" id="crudModalDeleteBtn" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.1); margin-right: auto; display: none;">Delete</button>
+          <button type="button" class="btn" id="crudModalCancelBtn">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="crudModalSubmitBtn">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Project Detail Modal -->
+  <div id="projectDetailModal" class="modal-overlay hidden" style="z-index: 1000;">
+    <div class="glass-panel-elevated" style="max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto;">
+      <div class="flex-between" style="padding: 16px 24px; border-bottom: 1px solid var(--border-color);">
+        <h3 id="projectDetailTitle" style="margin: 0; font-size: 1.25rem;">Project Details</h3>
+        <div style="display: flex; gap: 8px;">
+          <button id="projectDetailDeleteBtn" class="btn" style="color: #ef4444; border-color: rgba(239,68,68,0.3); background: rgba(239,68,68,0.1); padding:4px 10px;">Delete</button>
+          <button id="projectDetailCloseBtn" class="btn" style="background:transparent; padding:4px;"><i data-lucide="x"></i></button>
+        </div>
+      </div>
+      <div style="padding: 24px;">
+        <p id="projectDetailDesc" style="color: var(--text-secondary); margin-bottom: 24px; font-size: 0.95rem;"></p>
+        
+        <div class="flex-between" style="margin-bottom: 12px;">
+          <h4 style="margin: 0;">Project Tasks</h4>
+          <button id="projectDetailAddTaskBtn" class="btn btn-primary" style="padding: 4px 10px; font-size: 0.8rem;">+ Add Task</button>
+        </div>
+        
+        <div id="projectDetailTasksList" style="display: flex; flex-direction: column; gap: 8px;">
+          <!-- Tasks will be rendered here -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Onboarding Modal (Hidden by default) -->
+  <div id="onboardingModal" class="modal-overlay hidden" style="z-index: 1001;">
+    <div class="command-palette-modal glass-panel-elevated" style="max-width: 500px; max-height: 90vh; overflow-y: auto;">
+      <div class="view-header" style="padding: 32px 32px 16px;">
+        <h2 style="font-size: 1.5rem; margin-bottom: 8px;">Welcome to NOVA</h2>
+        <p class="text-secondary">Let's set up your command center.</p>
+      </div>
+      <div style="padding: 0 32px 32px; display: flex; flex-direction: column; gap: 20px;">
+        <div class="form-group" style="display: flex; flex-direction: column; gap: 8px;">
+          <label class="text-secondary" style="font-size: 0.9rem;">What should we call you?</label>
+          <input type="text" id="obName" placeholder="Your name" style="background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); color: var(--text-primary); padding: 12px; border-radius: var(--radius-md);">
+        </div>
+        <div class="form-group" style="display: flex; flex-direction: column; gap: 8px;">
+          <label class="text-secondary" style="font-size: 0.9rem;">Primary Goal</label>
+          <select id="obGoal" style="background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); color: var(--text-primary); padding: 12px; border-radius: var(--radius-md);">
+            <option value="Work">Work</option>
+            <option value="Study">Study</option>
+            <option value="Personal">Personal</option>
+            <option value="Mixed">Mixed</option>
+          </select>
+        </div>
+        <div class="form-group" style="display: flex; flex-direction: column; gap: 8px;">
+          <label class="text-secondary" style="font-size: 0.9rem;">Typical Available Time</label>
+          <select id="obTime" style="background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); color: var(--text-primary); padding: 12px; border-radius: var(--radius-md);">
+            <option value="Morning">Morning</option>
+            <option value="Afternoon">Afternoon</option>
+            <option value="Evening">Evening</option>
+            <option value="Flexible">Flexible</option>
+          </select>
+        </div>
+        
+        <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 8px 0;"></div>
+        <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: -10px;">Connect Your Tools</h3>
+        
+        <div class="form-group" style="display: flex; flex-direction: column; gap: 8px;">
+          <label class="text-secondary" style="font-size: 0.9rem;">Google Gemini API Key</label>
+          <input type="password" id="obGeminiKey" placeholder="AI core (Required)" style="background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); color: var(--text-primary); padding: 12px; border-radius: var(--radius-md);">
+        </div>
+        <div class="form-group" style="display: flex; flex-direction: column; gap: 8px;">
+          <label class="text-secondary" style="font-size: 0.9rem;">Google Calendar Secret URL</label>
+          <input type="password" id="obGcalUrl" placeholder="Optional" style="background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); color: var(--text-primary); padding: 12px; border-radius: var(--radius-md);">
+        </div>
+        <div style="display: flex; gap: 12px;">
+          <div class="form-group" style="display: flex; flex-direction: column; gap: 8px; flex: 1;">
+            <label class="text-secondary" style="font-size: 0.9rem;">Spotify Client ID</label>
+            <input type="password" id="obSpotifyId" placeholder="Optional" style="background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); color: var(--text-primary); padding: 12px; border-radius: var(--radius-md);">
+          </div>
+          <div class="form-group" style="display: flex; flex-direction: column; gap: 8px; flex: 1;">
+            <label class="text-secondary" style="font-size: 0.9rem;">Spotify Client Secret</label>
+            <input type="password" id="obSpotifySecret" placeholder="Optional" style="background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); color: var(--text-primary); padding: 12px; border-radius: var(--radius-md);">
+          </div>
+        </div>
+        <div class="form-group" style="display: flex; flex-direction: column; gap: 8px;">
+          <label class="text-secondary" style="font-size: 0.9rem;">Discord Webhook URL</label>
+          <input type="password" id="obDiscordWebhook" placeholder="Optional" style="background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); color: var(--text-primary); padding: 12px; border-radius: var(--radius-md);">
+        </div>
+        
+        <div style="display: flex; gap: 12px; margin-top: 12px;">
+          <button id="obSkipBtn" class="btn btn-outline" style="flex: 1;">Skip</button>
+          <button id="obSaveBtn" class="btn btn-primary" style="flex: 1;">Complete Setup</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Google Calendar Integration Modal -->
+  <div id="gcalModal" class="modal-overlay hidden" style="z-index: 1002;">
+    <div class="glass-panel-elevated" style="max-width: 540px; width: 100%; border-radius: var(--radius-lg); overflow: hidden;">
+      <div class="flex-between" style="padding: 20px 24px; border-bottom: 1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div style="width:36px; height:36px; border-radius:8px; background:linear-gradient(135deg, #4285F4, #34A853); display:flex; align-items:center; justify-content:center; font-size:1.1rem;">📅</div>
+          <div>
+            <h3 style="margin: 0; font-size: 1.15rem;">Connect Google Calendar</h3>
+            <p class="text-secondary" style="font-size: 0.82rem; margin: 0;">Sync meetings, schedules, and events into NOVA</p>
+          </div>
+        </div>
+        <button id="closeGcalModalBtn" class="btn" style="background:transparent; padding:4px;" onclick="document.getElementById('gcalModal').classList.add('hidden')"><i data-lucide="x"></i></button>
+      </div>
+
+      <div style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
+        <!-- Sync Method 1: Google OAuth -->
+        <div class="glass-panel" style="padding: 16px; border: 1px solid var(--border-highlight); background: rgba(255,255,255,0.03);">
+          <div style="font-weight: 600; font-size: 0.95rem; margin-bottom: 6px; display:flex; align-items:center; gap:8px;">
+            <i data-lucide="lock" style="width:16px; height:16px; color:#60a5fa;"></i> Method 1: Sign in with Google (OAuth 2.0)
+          </div>
+          <p class="text-secondary" style="font-size: 0.82rem; margin-bottom: 12px; line-height: 1.4;">
+            Authorize NOVA to read your Google Calendar directly via official Google API.
+          </p>
+          <button class="btn btn-outline" style="width: 100%; justify-content: center; gap: 10px; font-size: 0.88rem; background: rgba(255,255,255,0.05);" onclick="window.novaSettings?.connectGoogleOAuth()">
+            <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.7 14.8 1 12 1 7.4 1 3.5 3.6 1.6 7.4l3.7 2.9C6.2 7.3 8.9 5 12 5z"/><path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.7-.2-2.3H12v4.6h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.9z"/><path fill="#FBBC05" d="M5.3 14.7c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.6 7.2C.6 9.2 0 11.5 0 14s.6 4.8 1.6 6.8l3.7-2.9z"/><path fill="#34A853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3.1 0-5.8-2.3-6.7-5.3L1.6 15.9C3.5 19.8 7.4 23 12 23z"/></svg>
+            Sign in with Google
+          </button>
+        </div>
+
+        <!-- Sync Method 2: Secret iCal URL -->
+        <div class="glass-panel" style="padding: 16px; border: 1px solid var(--border-color); background: rgba(255,255,255,0.02);">
+          <div style="font-weight: 600; font-size: 0.95rem; margin-bottom: 6px; display:flex; align-items:center; gap:8px;">
+            <i data-lucide="link" style="width:16px; height:16px; color:#a855f7;"></i> Method 2: Google Calendar Secret iCal Feed
+          </div>
+          <p class="text-secondary" style="font-size: 0.82rem; margin-bottom: 10px; line-height: 1.4;">
+            Paste your Google Calendar secret address URL:
+            <span style="display:block; color:#94a3b8; font-size:0.75rem; margin-top:2px;">(Google Calendar &gt; Settings &gt; Integrate calendar &gt; "Secret address in iCal format")</span>
+          </p>
+          <div style="display:flex; gap:8px;">
+            <input type="text" id="gcalIcalInput" placeholder="https://calendar.google.com/calendar/ical/.../basic.ics" style="flex:1; padding:10px 14px; border-radius:var(--radius-md); background:rgba(0,0,0,0.3); border:1px solid var(--border-color); color:white; font-size:0.85rem;">
+            <button class="btn btn-primary" onclick="window.novaSettings?.syncIcalUrl(document.getElementById('gcalIcalInput').value)" style="font-size:0.85rem; padding:10px 16px;">Sync Feed</button>
+          </div>
+        </div>
+
+        <!-- Sync Method 3: Instant Live Sync -->
+        <div class="glass-panel" style="padding: 16px; border: 1px solid rgba(74, 222, 128, 0.3); background: rgba(74, 222, 128, 0.04);">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div style="font-weight: 600; font-size: 0.92rem; color: #4ade80; display:flex; align-items:center; gap:6px;">
+                <i data-lucide="zap" style="width:16px; height:16px;"></i> Instant Live Sync (Mockup Schedule)
+              </div>
+              <p class="text-secondary" style="font-size: 0.8rem; margin-top: 2px;">
+                Immediately syncs today's schedule (Math Tuition, Project Meeting, Family Time).
+              </p>
+            </div>
+            <button class="btn btn-primary" style="background:#16a34a; border-color:#22c55e; font-size:0.82rem; padding:8px 16px;" onclick="window.novaSettings?.syncQuickLive()">
+              Sync Now
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Templates for Views -->
+  <template id="tpl-overview">
+    <div class="view-header flex-between" style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 24px;">
+      <div>
+        <h1 id="greeting" style="display:flex; align-items:center; gap:8px;">Good evening, Ashwath 👋</h1>
+        <p class="text-secondary">Here's what matters today.</p>
+      </div>
+      <button class="btn btn-outline" id="generateNewBtn" onclick="window.novaOverview?.generateNewBriefing()" style="display:flex; align-items:center; gap:8px; border-radius:var(--radius-full); font-size:0.85rem; padding:8px 16px;">
+        <i data-lucide="sparkles" class="text-accent-gradient"></i> Generate New
+      </button>
+    </div>
+
+    <!-- 4 Quick Stat Cards matching mockup -->
+    <div class="stat-cards-grid">
+      <div class="stat-card">
+        <div class="stat-icon-wrapper tasks">✓</div>
+        <div class="stat-info">
+          <div class="stat-number" id="statTasksLeft">0</div>
+          <div class="stat-label">Tasks left</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon-wrapper projects">📁</div>
+        <div class="stat-info">
+          <div class="stat-number" id="statProjectsDeadline">0</div>
+          <div class="stat-label">Project deadline</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon-wrapper events">📅</div>
+        <div class="stat-info">
+          <div class="stat-number" id="statEventsToday">0</div>
+          <div class="stat-label">Events today</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon-wrapper streak">🔥</div>
+        <div class="stat-info">
+          <div class="stat-number" id="statDayStreak">1</div>
+          <div class="stat-label">Day streak</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Middle Row: Ask NOVA anything... (Glowing 3D Orb Box) + Today's AI Briefing -->
+    <div class="overview-middle-grid">
+      <div class="ai-orb-card">
+        <div class="ai-orb" title="NOVA AI Core"></div>
+        <div class="ai-prompt-content">
+          <div class="ai-input-box">
+            <input type="text" id="overviewAiInput" placeholder="Ask NOVA anything..." onkeydown="if(event.key==='Enter') window.novaOverview?.askNova(this.value)">
+            <button class="ai-submit-btn" onclick="window.novaOverview?.askNova(document.getElementById('overviewAiInput').value)"><i data-lucide="arrow-right" style="width:16px;height:16px;"></i></button>
+          </div>
+          <div class="quick-chips-row">
+            <button class="chip-btn" onclick="window.novaOverview?.askNova('Plan my day')">Plan my day</button>
+            <button class="chip-btn" onclick="window.novaOverview?.askNova('Create a task')">Create a task</button>
+            <button class="chip-btn" onclick="window.novaOverview?.askNova('Break down my project')">Break down my project</button>
+            <button class="chip-btn" onclick="window.novaOverview?.askNova('What should I work on?')">What should I work on?</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="ai-briefing-card">
+        <div>
+          <div class="briefing-card-title">
+            <i data-lucide="sparkles" style="width:16px; height:16px; color:#a855f7;"></i>
+            Today's AI Briefing
+          </div>
+          <div class="briefing-card-body" id="aiBriefingContent">
+            Analyzing your command center and active tasks...
+          </div>
+        </div>
+        <button class="plan-day-btn" onclick="window.location.hash='#planner'; document.querySelector('[data-route=planner]')?.click();">
+          <i data-lucide="sparkles" style="width:14px; height:14px;"></i> Plan my day →
+        </button>
+      </div>
+    </div>
+
+    <!-- Bottom Row: 3 Columns (Today's Tasks, Upcoming Events, Project Progress) -->
+    <div class="overview-bottom-grid">
+      <!-- Column 1: Today's Tasks -->
+      <div class="bottom-widget-card">
+        <div class="widget-header">
+          <span class="widget-title">Today's Tasks</span>
+          <a href="#tasks" class="widget-link">View all →</a>
+        </div>
+        <div id="overviewTasksList">
+          <div style="text-align:center; padding: 24px; color:var(--text-muted); font-size:0.85rem;">
+            Loading real tasks...
+          </div>
+        </div>
+      </div>
+
+      <!-- Column 2: Upcoming Events (Syncs from Google Calendar) -->
+      <div class="bottom-widget-card">
+        <div class="widget-header">
+          <span class="widget-title">Upcoming Events</span>
+          <a href="#calendar" class="widget-link">View all →</a>
+        </div>
+        <div id="overviewEventsList">
+          <div style="text-align:center; padding: 24px; color:var(--text-muted); font-size:0.85rem;">
+            Loading calendar events...
+          </div>
+        </div>
+      </div>
+
+      <!-- Column 3: Project Progress -->
+      <div class="bottom-widget-card">
+        <div class="widget-header">
+          <span class="widget-title">Project Progress</span>
+          <a href="#projects" class="widget-link">View all →</a>
+        </div>
+        <div id="overviewProjectsList">
+          <div style="text-align:center; padding: 24px; color:var(--text-muted); font-size:0.85rem;">
+            Loading projects...
+          </div>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <!-- AI Command View Matching Mockup -->
+  <template id="tpl-ai-command">
+    <div class="view-header">
+      <h1>AI Command</h1>
+      <p class="text-secondary">How can I help you move forward?</p>
+    </div>
+
+    <div class="ai-command-container">
+      <div class="ai-orb-card" style="padding: 32px;">
+        <div class="ai-orb" style="width:84px; height:84px; min-width:84px;"></div>
+        <div class="ai-prompt-content" style="gap:16px;">
+          <div class="ai-input-box" style="padding: 6px 8px 6px 20px;">
+            <input type="text" id="aiCommandPageInput" placeholder="Ask NOVA anything..." onkeydown="if(event.key==='Enter') window.novaAI?.openAndSend(this.value)">
+            <button class="ai-submit-btn" style="width:40px; height:40px;" onclick="window.novaAI?.openAndSend(document.getElementById('aiCommandPageInput').value)"><i data-lucide="arrow-right"></i></button>
+          </div>
+          <div class="quick-chips-row">
+            <button class="chip-btn" onclick="window.novaAI?.openAndSend('Plan my workout and songs')">🏋️ Plan Workout & Songs</button>
+            <button class="chip-btn" onclick="window.novaAI?.openAndSend('Plan my day with my calendar and music')">📅 Plan My Day</button>
+            <button class="chip-btn" onclick="window.novaAI?.openAndSend('What songs from my playlist should I listen to while coding NOVA?')">🎵 Workout / Focus Songs</button>
+            <button class="chip-btn" onclick="window.novaAI?.openAndSend('Create a task')">Create a task</button>
+            <button class="chip-btn" onclick="window.novaAI?.openAndSend('Break down my project')">Break down my project</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass-panel" style="padding: 24px;">
+        <h4 style="margin-bottom: 14px; font-size: 0.95rem; color: var(--text-secondary);">Try these examples:</h4>
+        <div class="ai-examples-list">
+          <div class="ai-example-card" onclick="window.novaAI?.openAndSend('Plan my workout session and assign songs from my Spotify playlist')">
+            <span>•</span> <span>Plan my workout session and assign songs from my connected Spotify playlist</span>
+          </div>
+          <div class="ai-example-card" onclick="window.novaAI?.openAndSend('What is my schedule today based on Google Calendar?')">
+            <span>•</span> <span>What is my schedule today based on Google Calendar?</span>
+          </div>
+          <div class="ai-example-card" onclick="window.novaAI?.openAndSend('I have 2 hours tonight. What should I work on?')">
+            <span>•</span> <span>I have 2 hours tonight. What should I work on?</span>
+          </div>
+          <div class="ai-example-card" onclick="window.novaAI?.openAndSend('Create a task to study mathematics tomorrow at 7 PM')">
+            <span>•</span> <span>Create a task to study mathematics tomorrow at 7 PM</span>
+          </div>
+          <div class="ai-example-card" onclick="window.novaAI?.openAndSend('Break my NOVA project into 5 actionable tasks')">
+            <span>•</span> <span>Break my NOVA project into 5 tasks</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <template id="tpl-tasks">
+    <div class="view-header flex-between" style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 24px;">
+      <div>
+        <h1>Tasks</h1>
+        <p class="text-secondary">Everything you need to get done.</p>
+      </div>
+      <button class="btn btn-primary" onclick="window.novaTasks.openCreateModal()" style="display:flex; align-items:center; gap:8px;"><i data-lucide="plus"></i> New Task</button>
+    </div>
+    
+    <!-- Filter tabs matching mockup: [All] [Today] [Upcoming] [Overdue] [Completed] -->
+    <div class="filter-tabs-bar" id="tasksFilterTabs">
+      <button class="filter-tab-pill active" onclick="window.novaTasks?.filterByTab('All', this)">All</button>
+      <button class="filter-tab-pill" onclick="window.novaTasks?.filterByTab('Today', this)">Today</button>
+      <button class="filter-tab-pill" onclick="window.novaTasks?.filterByTab('Upcoming', this)">Upcoming</button>
+      <button class="filter-tab-pill" onclick="window.novaTasks?.filterByTab('Overdue', this)">Overdue</button>
+      <button class="filter-tab-pill" onclick="window.novaTasks?.filterByTab('Completed', this)">Completed</button>
+    </div>
+
+    <div class="task-board">
+      <div class="task-column">
+        <h3>To Do <span class="badge" id="countTodo">0</span></h3>
+        <div id="listTodo" class="task-list"></div>
+      </div>
+      <div class="task-column">
+        <h3>In Progress <span class="badge" id="countInProgress">0</span></h3>
+        <div id="listInProgress" class="task-list"></div>
+      </div>
+      <div class="task-column">
+        <h3>Completed <span class="badge" id="countCompleted">0</span></h3>
+        <div id="listCompleted" class="task-list"></div>
+      </div>
+    </div>
+  </template>
+
+  <template id="tpl-projects">
+    <div class="view-header flex-between" style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 24px;">
+      <div>
+        <h1>Projects</h1>
+        <p class="text-secondary">Turn your ideas into reality.</p>
+      </div>
+      <button class="btn btn-primary" onclick="window.novaProjects.openCreateModal()" style="display:flex; align-items:center; gap:8px;"><i data-lucide="plus"></i> New Project</button>
+    </div>
+    <div id="projectsGrid" class="projects-grid"></div>
+  </template>
+
+  <template id="tpl-notes">
+    <div class="view-header flex-between">
+      <div>
+        <h1>Notes</h1>
+        <p class="text-secondary">Capture your thoughts.</p>
+      </div>
+      <button class="btn btn-primary" onclick="window.novaNotes.openCreateModal()"><i data-lucide="plus"></i> New Note</button>
+    </div>
+    <div id="notesGrid" class="notes-grid"></div>
+  </template>
+
+  <template id="tpl-habits">
+    <div class="view-header flex-between">
+      <div>
+        <h1>Habits</h1>
+        <p class="text-secondary">Build consistency.</p>
+      </div>
+      <button class="btn btn-primary" onclick="window.novaHabits.openCreateModal()"><i data-lucide="plus"></i> New Habit</button>
+    </div>
+    <div id="habitsList" class="habits-list"></div>
+  </template>
+
+  <template id="tpl-calendar">
+    <div class="view-header flex-between">
+      <div>
+        <h1>Calendar</h1>
+        <p class="text-secondary">Your schedule at a glance.</p>
+      </div>
+      <div style="display: flex; gap: 12px;">
+        <button class="btn btn-outline" onclick="window.novaCalendar?.syncGoogleCalendar()"><i data-lucide="refresh-cw"></i> Sync Calendar</button>
+        <button class="btn btn-primary" onclick="window.novaCalendar?.openCreateModal()"><i data-lucide="plus"></i> Add Event</button>
+      </div>
+    </div>
+    <div id="calendarView" class="glass-panel" style="min-height: 500px; padding: 20px;">
+      <!-- Basic list view of upcoming events for now -->
+      <div id="eventsList" class="events-list"></div>
+    </div>
+  </template>
+
+  <template id="tpl-planner">
+    <!-- Planner Header -->
+    <div class="view-header" style="margin-bottom: 20px;">
+      <h1 style="font-size: 1.8rem; font-weight: 700; margin-bottom: 4px;">Planner</h1>
+      <p class="text-secondary" style="font-size: 0.92rem; margin: 0;">Your day, intelligently organized.</p>
+    </div>
+
+    <!-- Compact Summary Card & Primary CTA -->
+    <div class="glass-panel" id="plannerSummaryCard" style="padding: 20px 24px; margin-bottom: 20px; border-radius: var(--radius-lg); border: 1px solid var(--border-highlight); background: linear-gradient(135deg, rgba(14, 18, 29, 0.95), rgba(30, 41, 59, 0.4));">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+        <!-- Left: Metrics Strip -->
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div style="font-size: 0.82rem; font-weight: 700; color: #818cf8; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 8px;">
+            <span>TODAY</span>
+            <span style="color: var(--text-muted); font-weight: 400;">•</span>
+            <span id="plannerFormattedDate" style="color: #f8fafc; font-weight: 600;">Today</span>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap; font-size: 0.88rem;">
+            <div>
+              <span style="color: var(--text-muted); font-size: 0.78rem; display: block;">Available time:</span>
+              <span id="metricAvailableTime" style="font-weight: 700; color: #4ade80; font-size: 1.05rem;">Calculating...</span>
+            </div>
+            <div style="width: 1px; height: 26px; background: rgba(255,255,255,0.1);"></div>
+            <div>
+              <span style="color: var(--text-muted); font-size: 0.78rem; display: block;">Fixed commitments:</span>
+              <span id="metricFixedCount" style="font-weight: 700; color: #60a5fa; font-size: 1.05rem;">-</span>
+            </div>
+            <div style="width: 1px; height: 26px; background: rgba(255,255,255,0.1);"></div>
+            <div>
+              <span style="color: var(--text-muted); font-size: 0.78rem; display: block;">Tasks:</span>
+              <span id="metricTaskCount" style="font-weight: 700; color: #f8fafc; font-size: 1.05rem;">-</span>
+            </div>
+            <div style="width: 1px; height: 26px; background: rgba(255,255,255,0.1);"></div>
+            <div>
+              <span style="color: var(--text-muted); font-size: 0.78rem; display: block;">Deadlines:</span>
+              <span id="metricDeadlineCount" style="font-weight: 700; color: #f87171; font-size: 1.05rem;">-</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: The ONE Primary Action Button Zone -->
+        <div id="plannerPrimaryActionZone" style="display: flex; gap: 10px; align-items: center;">
+          <button id="btnPrimaryPlan" class="btn btn-primary" onclick="window.novaPlanner.planMyDay()" style="font-size: 0.95rem; font-weight: 700; padding: 12px 24px; border-radius: 10px; background: linear-gradient(135deg, #6366f1, #8b5cf6); box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4); border: none; display: flex; align-items: center; gap: 8px; cursor: pointer; transition: all 0.2s;">
+            <i data-lucide="sparkles" style="width: 18px; height: 18px;"></i>
+            <span id="btnPrimaryPlanText">✨ Plan My Day</span>
+          </button>
+          <button id="btnReplanSecondary" class="btn btn-secondary hidden" onclick="window.novaPlanner.replanRemaining()" style="font-size: 0.85rem; padding: 11px 16px; border-radius: 10px; display: flex; align-items: center; gap: 6px;">
+            <i data-lucide="rotate-cw" style="width: 14px; height: 14px;"></i>
+            <span>Replan</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Progress State Container (Visible while generating) -->
+    <div id="plannerProgressState" class="glass-panel hidden" style="padding: 30px; text-align: center; margin-bottom: 20px; border-radius: var(--radius-lg); background: rgba(14, 18, 29, 0.85); border: 1px solid rgba(99, 102, 241, 0.3);">
+      <div class="typing-indicator" style="justify-content: center; background: transparent; border: none; margin: 0 auto 16px;">
+        <span></span><span></span><span></span>
+      </div>
+      <div id="plannerProgressMessage" style="font-size: 1.05rem; font-weight: 600; color: #f8fafc; margin-bottom: 6px;">
+        Checking your calendar...
+      </div>
+      <p style="font-size: 0.82rem; color: #94a3b8; margin: 0;">NOVA is reading your real calendar events and prioritizing tasks.</p>
+    </div>
+
+    <!-- Active Day Execution HUD (Visible when user clicks Start My Day or plan is active) -->
+    <div id="plannerActiveHud" class="hidden" style="margin-bottom: 24px;">
+      <div class="glass-panel" style="padding: 24px; border-radius: var(--radius-lg); border: 1px solid rgba(74, 222, 128, 0.35); background: linear-gradient(135deg, rgba(14, 18, 29, 0.98), rgba(20, 30, 48, 0.95)); box-shadow: 0 8px 30px rgba(0,0,0,0.5);">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; margin-bottom: 18px;">
+          <!-- NOW Panel -->
+          <div style="flex: 1; min-width: 280px;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+              <span style="font-size: 0.72rem; font-weight: 800; color: #4ade80; background: rgba(74, 222, 128, 0.15); border: 1px solid rgba(74, 222, 128, 0.3); padding: 3px 8px; border-radius: 6px; letter-spacing: 0.05em;">NOW</span>
+              <span id="hudNowCategory" style="font-size: 0.82rem; color: #cbd5e1; font-weight: 600;">🎯 Deep Focus</span>
+            </div>
+            <h2 id="hudNowTitle" style="font-size: 1.35rem; font-weight: 700; color: #f8fafc; margin: 0 0 8px 0; line-height: 1.3;">
+              Finish ML Presentation
+            </h2>
+            <div style="display: flex; align-items: center; gap: 12px; font-size: 0.85rem; color: #94a3b8; margin-bottom: 12px;">
+              <span id="hudNowTime">10:00 AM — 11:30 AM</span>
+              <span>•</span>
+              <span id="hudNowRemaining" style="color: #4ade80; font-weight: 600;">45m remaining</span>
+            </div>
+
+            <!-- Animated Progress Bar -->
+            <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; margin-bottom: 14px;">
+              <div id="hudNowProgressBar" style="width: 45%; height: 100%; background: linear-gradient(90deg, #22c55e, #4ade80); border-radius: 4px; transition: width 0.5s ease;"></div>
+            </div>
+
+            <!-- Spotify Track Attachment (If applicable) -->
+            <div id="hudNowSpotify" class="hidden" style="margin-bottom: 14px;"></div>
+
+            <!-- Action Controls -->
+            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+              <button id="btnCompleteHudTask" class="btn btn-primary" onclick="window.novaPlanner.completeCurrentBlock()" style="background: #16a34a; border-color: #22c55e; color: #fff; font-weight: 600; font-size: 0.85rem; padding: 8px 16px; display: flex; align-items: center; gap: 6px;">
+                <i data-lucide="check-circle" style="width: 15px; height: 15px;"></i> Mark Completed
+              </button>
+              <button class="btn btn-secondary" onclick="window.novaPlanner.skipCurrentBlock()" style="font-size: 0.85rem; padding: 8px 14px; display: flex; align-items: center; gap: 6px;">
+                <i data-lucide="skip-forward" style="width: 14px; height: 14px;"></i> Next Block
+              </button>
+            </div>
+          </div>
+
+          <!-- NEXT Panel -->
+          <div style="width: 260px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 16px;">
+            <div style="font-size: 0.72rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">NEXT UP</div>
+            <div id="hudNextTime" style="font-size: 0.82rem; color: #60a5fa; font-weight: 600; margin-bottom: 4px;">11:45 AM</div>
+            <div id="hudNextTitle" style="font-size: 0.95rem; font-weight: 600; color: #f8fafc; line-height: 1.35; margin-bottom: 6px;">Mathematics class</div>
+            <div id="hudNextCategory" style="font-size: 0.75rem; color: #94a3b8;">Google Calendar Fixed Event</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Day Complete Celebration Card (Hidden until finished) -->
+    <div id="plannerDayCompleteCard" class="glass-panel hidden" style="padding: 28px; text-align: center; margin-bottom: 24px; border-radius: var(--radius-lg); border: 1px solid rgba(74, 222, 128, 0.4); background: linear-gradient(135deg, rgba(74, 222, 128, 0.1), rgba(14, 18, 29, 0.95));">
+      <div style="font-size: 2.2rem; margin-bottom: 10px;">🎉</div>
+      <h2 style="font-size: 1.4rem; font-weight: 800; color: #f8fafc; margin: 0 0 8px 0;">DAY COMPLETE</h2>
+      <p style="font-size: 0.9rem; color: #cbd5e1; max-width: 500px; margin: 0 auto 18px auto; line-height: 1.5;">
+        Outstanding execution today. All scheduled focus sessions, fixed commitments, and habits were completed.
+      </p>
+      <div id="plannerCompletionStats" style="display: flex; justify-content: center; gap: 20px; font-size: 0.88rem; flex-wrap: wrap; margin-bottom: 18px;">
+        <!-- Filled dynamically -->
+      </div>
+      <div style="font-size: 0.85rem; color: #818cf8; font-weight: 600;">
+        ✨ Tomorrow's priorities are ready for review.
+      </div>
+    </div>
+
+    <!-- Plan Timeline Stream Container -->
+    <div class="glass-panel" style="padding: 24px; border-radius: var(--radius-lg);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 14px; border-bottom: 1px solid rgba(255,255,255,0.08);">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 1.1rem;">📅</span>
+          <h3 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #f8fafc;">Today's Timeline</h3>
+        </div>
+        <div id="plannerTimelineStatus" style="font-size: 0.8rem; color: #94a3b8;"></div>
+      </div>
+
+      <div id="plannerTimeline" class="timeline">
+        <div style="text-align:center; padding: 40px; color:var(--text-muted);">
+          Loading your personalized daily plan...
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <template id="tpl-settings">
+    <div class="view-header">
+      <div style="display: flex; align-items: center; gap: 8px; font-size: 0.88rem; color: var(--text-muted); margin-bottom: 4px;">
+        <span>Settings</span>
+        <span>→</span>
+        <span style="color: var(--accent-primary); font-weight: 500;" id="settingsBreadcrumb">Integrations</span>
+      </div>
+      <h1 id="settingsTitle">Integrations</h1>
+      <p class="text-secondary" id="settingsSubtitle">Connect external services to empower NOVA's AI planning system with authorized real-time data.</p>
+    </div>
+
+    <!-- Tab Bar: Integrations, API Credentials & Profile -->
+    <div style="display: flex; gap: 10px; margin-bottom: 24px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; overflow-x: auto;">
+      <button class="filter-tab-pill active" id="tabBtnIntegrations" onclick="window.novaSettings.switchTab('integrations', this)" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+        <i data-lucide="plug" style="width:16px;height:16px;"></i> Integrations
+      </button>
+      <button class="filter-tab-pill" id="tabBtnCredentials" onclick="window.novaSettings.switchTab('credentials', this)" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+        <i data-lucide="key" style="width:16px;height:16px;"></i> API Keys & Credentials
+      </button>
+      <button class="filter-tab-pill" id="tabBtnSubscription" onclick="window.novaSettings.switchTab('subscription', this)" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+        <i data-lucide="credit-card" style="width:16px;height:16px;"></i> Subscription
+      </button>
+      <button class="filter-tab-pill" id="tabBtnProfile" onclick="window.novaSettings.switchTab('profile', this)" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+        <i data-lucide="user" style="width:16px;height:16px;"></i> Profile
+      </button>
+    </div>
+
+    <!-- TAB 4: SUBSCRIPTION -->
+    <div id="settingsSectionSubscription" style="display: none;">
+      <div class="glass-panel" style="padding: 24px; margin-bottom: 24px;">
+        <h3 style="margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+          <i data-lucide="credit-card" style="width:18px; height:18px; color: #a855f7;"></i> Subscription Plan
+        </h3>
+        <p class="text-secondary" style="font-size: 0.88rem; margin-bottom: 24px;">
+          View and manage your current NOVA entitlement. <strong>Payments are coming soon.</strong>
+        </p>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px;">
+          
+          <!-- FREE -->
+          <div class="connector-card glass-panel-elevated" id="plan-card-free" style="padding: 20px; border-radius: var(--radius-lg); border: 1px solid var(--border-color); display: flex; flex-direction: column;">
+            <h4 style="margin: 0; font-size: 1.1rem; color: #f8fafc;">FREE</h4>
+            <div style="font-size: 1.4rem; font-weight: 700; color: #a855f7; margin: 10px 0;">₹0<span style="font-size: 0.8rem; font-weight: 400; color: var(--text-muted);">/month</span></div>
+            <ul style="list-style: none; padding: 0; margin: 0 0 20px 0; font-size: 0.85rem; color: var(--text-secondary); display: flex; flex-direction: column; gap: 8px; flex-grow: 1;">
+              <li>✓ 50 tasks, 3 projects</li>
+              <li>✓ 50 notes, 5 habits</li>
+              <li>✓ 50 Calendar events/mo</li>
+              <li>✓ 20 AI commands/mo</li>
+              <li>✓ Basic AI planning</li>
+            </ul>
+            <div class="plan-status" id="plan-status-free" style="font-size: 0.85rem; font-weight: 600; color: #4ade80; display: none;">✓ Current Plan</div>
+            <button class="btn btn-outline plan-upgrade-btn" id="plan-upgrade-free" onclick="window.novaSettings.upgradePlan('free')" style="width: 100%;">Payments coming soon</button>
+          </div>
+
+          <!-- PRO -->
+          <div class="connector-card glass-panel-elevated" id="plan-card-pro" style="padding: 20px; border-radius: var(--radius-lg); border: 1px solid var(--border-color); display: flex; flex-direction: column;">
+            <h4 style="margin: 0; font-size: 1.1rem; color: #f8fafc;">PRO</h4>
+            <div style="font-size: 1.4rem; font-weight: 700; color: #a855f7; margin: 10px 0;">₹30<span style="font-size: 0.8rem; font-weight: 400; color: var(--text-muted);">/month</span></div>
+            <ul style="list-style: none; padding: 0; margin: 0 0 20px 0; font-size: 0.85rem; color: var(--text-secondary); display: flex; flex-direction: column; gap: 8px; flex-grow: 1;">
+              <li>✓ 500 tasks, 15 projects</li>
+              <li>✓ 500 notes, 20 habits</li>
+              <li>✓ 300 Calendar events/mo</li>
+              <li>✓ 300 AI commands/mo</li>
+              <li>✓ Gmail integration</li>
+              <li>✓ Advanced AI planning</li>
+            </ul>
+            <div class="plan-status" id="plan-status-pro" style="font-size: 0.85rem; font-weight: 600; color: #4ade80; display: none;">✓ Current Plan</div>
+            <button class="btn btn-outline plan-upgrade-btn" id="plan-upgrade-pro" onclick="window.novaSettings.upgradePlan('pro')" style="width: 100%;">Payments coming soon</button>
+          </div>
+
+          <!-- PRO PLUS -->
+          <div class="connector-card glass-panel-elevated" id="plan-card-pro_plus" style="padding: 20px; border-radius: var(--radius-lg); border: 1px solid var(--border-color); display: flex; flex-direction: column;">
+            <h4 style="margin: 0; font-size: 1.1rem; color: #f8fafc;">PRO PLUS</h4>
+            <div style="font-size: 1.4rem; font-weight: 700; color: #a855f7; margin: 10px 0;">₹50<span style="font-size: 0.8rem; font-weight: 400; color: var(--text-muted);">/month</span></div>
+            <ul style="list-style: none; padding: 0; margin: 0 0 20px 0; font-size: 0.85rem; color: var(--text-secondary); display: flex; flex-direction: column; gap: 8px; flex-grow: 1;">
+              <li>✓ 2000 tasks, 50 projects</li>
+              <li>✓ 2000 notes, 50 habits</li>
+              <li>✓ 1000 Calendar events/mo</li>
+              <li>✓ 1000 AI commands/mo</li>
+              <li>✓ Discord integration</li>
+              <li>✓ Priority AI processing</li>
+            </ul>
+            <div class="plan-status" id="plan-status-pro_plus" style="font-size: 0.85rem; font-weight: 600; color: #4ade80; display: none;">✓ Current Plan</div>
+            <button class="btn btn-outline plan-upgrade-btn" id="plan-upgrade-pro_plus" onclick="window.novaSettings.upgradePlan('pro_plus')" style="width: 100%;">Payments coming soon</button>
+          </div>
+
+          <!-- PRO MAX -->
+          <div class="connector-card glass-panel-elevated" id="plan-card-pro_max" style="padding: 20px; border-radius: var(--radius-lg); border: 1px solid var(--border-color); display: flex; flex-direction: column; background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(0,0,0,0));">
+            <h4 style="margin: 0; font-size: 1.1rem; color: #f8fafc;">PRO MAX</h4>
+            <div style="font-size: 1.4rem; font-weight: 700; color: #a855f7; margin: 10px 0;">₹60<span style="font-size: 0.8rem; font-weight: 400; color: var(--text-muted);">/month</span></div>
+            <ul style="list-style: none; padding: 0; margin: 0 0 20px 0; font-size: 0.85rem; color: var(--text-secondary); display: flex; flex-direction: column; gap: 8px; flex-grow: 1;">
+              <li>✓ UNLIMITED EVERYTHING</li>
+              <li>✓ 3000 AI commands/mo</li>
+              <li>✓ All premium integrations</li>
+              <li>✓ Highest Priority AI</li>
+            </ul>
+            <div class="plan-status" id="plan-status-pro_max" style="font-size: 0.85rem; font-weight: 600; color: #4ade80; display: none;">✓ Current Plan</div>
+            <button class="btn btn-primary plan-upgrade-btn" id="plan-upgrade-pro_max" onclick="window.novaSettings.upgradePlan('pro_max')" style="width: 100%;">Payments coming soon</button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 1: INTEGRATIONS (Primary) -->
+    <div id="settingsSectionIntegrations">
+      <div class="glass-panel" style="padding: 24px; margin-bottom: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+          <div>
+            <h3 style="margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
+              <i data-lucide="shield-check" style="width:18px; height:18px; color: #10b981;"></i> Connected Services & Context Layer
+            </h3>
+            <p class="text-secondary" style="font-size: 0.88rem;">
+              Authorized integrations feed normalized information directly into NOVA's AI Planner. OAuth credentials and tokens remain strictly server-side.
+            </p>
+          </div>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button class="btn btn-secondary" onclick="window.novaSettings.openCredentialsModal()" style="font-size:0.82rem; padding: 7px 13px; display: flex; align-items: center; gap: 6px; border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.05); color: #f8fafc; font-weight: 500;">
+              <i data-lucide="key" style="width:14px;height:14px;color:#38bdf8;"></i> App Credentials
+            </button>
+            <button class="btn btn-secondary" onclick="window.novaSettings.loadIntegrations()" style="font-size:0.82rem; padding: 7px 13px; display: flex; align-items: center; gap: 6px;">
+              <i data-lucide="refresh-cw" style="width:14px;height:14px;"></i> Refresh Status
+            </button>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 18px;" id="integrationsCardsGrid">
+
+
+          <!-- 2. Google Calendar -->
+          <div class="connector-card glass-panel-elevated" id="card-google_calendar" style="padding: 22px; display: flex; flex-direction: column; gap: 14px; border: 1px solid var(--border-color); border-radius: var(--radius-lg);">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 42px; height: 42px; border-radius: 10px; background: linear-gradient(135deg, #4285F4, #34A853); display: flex; align-items: center; justify-content: center; font-size: 1.3rem;">📅</div>
+                <div>
+                  <div style="font-weight: 600; font-size: 1rem;">Google Calendar</div>
+                  <div class="connector-status" id="status-google_calendar" style="font-size: 0.8rem; color: var(--text-muted);">
+                    <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#666;margin-right:6px;"></span>Not connected
+                  </div>
+                </div>
+              </div>
+            </div>
+            <p style="font-size: 0.83rem; color: var(--text-secondary); line-height: 1.45; min-height: 48px;">
+              Read calendar events, schedules, and deadlines to structure realistic daily timelines and prevent scheduling conflicts.
+            </p>
+            <div style="font-size: 0.78rem; color: var(--text-muted); background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 6px;">
+              <strong>Permissions:</strong> calendar.readonly, calendar.events.readonly
+            </div>
+            <div id="toggles-google_calendar" style="display: none; padding: 6px 0;">
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: #c4b5fd; cursor: pointer;">
+                <input type="checkbox" id="chkPlanning-google_calendar" onchange="window.novaSettings.togglePlanningPermission('google_calendar', this.checked)" checked>
+                <span>Use Calendar for planning</span>
+              </label>
+            </div>
+            <div style="display: flex; gap: 8px; margin-top: auto;" id="actions-google_calendar">
+              <button class="btn btn-primary" onclick="window.novaSettings.openGCalModal()" style="flex:1; font-size: 0.85rem;">Connect</button>
+            </div>
+          </div>
+
+          <!-- 3. Gmail -->
+          <div class="connector-card glass-panel-elevated" id="card-gmail" style="padding: 22px; display: flex; flex-direction: column; gap: 14px; border: 1px solid var(--border-color); border-radius: var(--radius-lg);">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 42px; height: 42px; border-radius: 10px; background: linear-gradient(135deg, #EA4335, #FBBC05); display: flex; align-items: center; justify-content: center; font-size: 1.3rem;">📧</div>
+                <div>
+                  <div style="font-weight: 600; font-size: 1rem;">Gmail</div>
+                  <div class="connector-status" id="status-gmail" style="font-size: 0.8rem; color: var(--text-muted);">
+                    <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#666;margin-right:6px;"></span>Not connected
+                  </div>
+                </div>
+              </div>
+            </div>
+            <p style="font-size: 0.83rem; color: var(--text-secondary); line-height: 1.45; min-height: 48px;">
+              Read-only scan of inbox subjects and deadlines. Surfaces urgent deliverables directly into your AI briefings.
+            </p>
+            <div style="font-size: 0.78rem; color: var(--text-muted); background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 6px;">
+              <strong>Permissions:</strong> gmail.readonly (read-only snippets)
+            </div>
+            <div id="toggles-gmail" style="display: none; padding: 6px 0;">
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: #c4b5fd; cursor: pointer;">
+                <input type="checkbox" id="chkPlanning-gmail" onchange="window.novaSettings.togglePlanningPermission('gmail', this.checked)" checked>
+                <span>Use Gmail for planning</span>
+              </label>
+            </div>
+            <div style="display: flex; gap: 8px; margin-top: auto;" id="actions-gmail">
+              <button class="btn btn-outline" onclick="window.novaSettings.connectProvider('gmail')" style="flex:1; font-size: 0.85rem;">Connect</button>
+            </div>
+          </div>
+
+          <!-- 4. Spotify -->
+          <div class="connector-card glass-panel-elevated" id="card-spotify" style="padding: 22px; display: flex; flex-direction: column; gap: 14px; border: 1px solid var(--border-color); border-radius: var(--radius-lg);">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 42px; height: 42px; border-radius: 10px; background: linear-gradient(135deg, #1DB954, #191414); display: flex; align-items: center; justify-content: center; font-size: 1.3rem;">🎵</div>
+                <div>
+                  <div style="font-weight: 600; font-size: 1rem;">Spotify</div>
+                  <div class="connector-status" id="status-spotify" style="font-size: 0.8rem; color: var(--text-muted);">
+                    <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#666;margin-right:6px;"></span>Not connected
+                  </div>
+                </div>
+              </div>
+            </div>
+            <p style="font-size: 0.83rem; color: var(--text-secondary); line-height: 1.45; min-height: 48px;">
+              Connect your Spotify account to let NOVA understand your listening preferences and focus sessions.
+            </p>
+            <div id="capabilities-spotify" style="font-size: 0.78rem; color: var(--text-muted); background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 6px;">
+              <strong>Authorized capabilities:</strong> playback state, currently playing, top listening preferences
+            </div>
+            <div id="toggles-spotify" style="display: none; padding: 6px 0;">
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: #c4b5fd; cursor: pointer;">
+                <input type="checkbox" id="chkPlanning-spotify" onchange="window.novaSettings.togglePlanningPermission('spotify', this.checked)" checked>
+                <span>Use Spotify for planning</span>
+              </label>
+            </div>
+            <div style="display: flex; gap: 8px; margin-top: auto;" id="actions-spotify">
+              <button class="btn btn-primary" onclick="window.novaSettings.openSpotifyModal()" style="flex:1; font-size: 0.85rem; background: #1DB954; border-color: #1ed760; color: #000; font-weight: 600;">Connect Spotify</button>
+            </div>
+          </div>
+
+          <!-- 5. Discord -->
+          <div class="connector-card glass-panel-elevated" id="card-discord" style="padding: 22px; display: flex; flex-direction: column; gap: 14px; border: 1px solid var(--border-color); border-radius: var(--radius-lg);">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 42px; height: 42px; border-radius: 10px; background: linear-gradient(135deg, #5865F2, #7289DA); display: flex; align-items: center; justify-content: center; font-size: 1.3rem;">💬</div>
+                <div>
+                  <div style="font-weight: 600; font-size: 1rem;">Discord</div>
+                  <div class="connector-status" id="status-discord" style="font-size: 0.8rem; color: var(--text-muted);">
+                    <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#666;margin-right:6px;"></span>Not connected
+                  </div>
+                </div>
+              </div>
+            </div>
+            <p style="font-size: 0.83rem; color: var(--text-secondary); line-height: 1.45; min-height: 48px;">
+              Monitor server messages and mentions. AI analyzes incoming messages to tell you what you got and what you should be worried about.
+            </p>
+            <div id="capabilities-discord" style="font-size: 0.78rem; color: var(--text-muted); background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 6px;">
+              <strong>Authorized capabilities:</strong> identify, guilds, message triage & alerts
+            </div>
+            <div id="toggles-discord" style="display: none; padding: 6px 0;">
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: #c4b5fd; cursor: pointer;">
+                <input type="checkbox" id="chkPlanning-discord" onchange="window.novaSettings.togglePlanningPermission('discord', this.checked)" checked>
+                <span>Use Discord alerts for planning</span>
+              </label>
+            </div>
+            <div style="display: flex; gap: 8px; margin-top: auto;" id="actions-discord">
+              <button class="btn btn-primary" onclick="window.novaSettings.openDiscordModal()" style="flex:1; font-size: 0.85rem; background: #5865F2; border-color: #5865F2; color: #fff; font-weight: 600;">Connect Discord</button>
+            </div>
+          </div>
+
+          <!-- 6. Instagram -->
+          <div class="connector-card glass-panel-elevated" id="card-instagram" style="padding: 22px; display: flex; flex-direction: column; gap: 14px; border: 1px solid var(--border-color); border-radius: var(--radius-lg);">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 42px; height: 42px; border-radius: 10px; background: linear-gradient(135deg, #833AB4, #FD1D1D, #F77737); display: flex; align-items: center; justify-content: center; font-size: 1.3rem;">📸</div>
+                <div>
+                  <div style="font-weight: 600; font-size: 1rem;">Instagram</div>
+                  <div class="connector-status" id="status-instagram" style="font-size: 0.8rem; color: var(--text-muted);">
+                    <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#666;margin-right:6px;"></span>Not connected
+                  </div>
+                </div>
+              </div>
+            </div>
+            <p style="font-size: 0.83rem; color: var(--text-secondary); line-height: 1.45; min-height: 48px;">
+              Track scheduled post deadlines and content publishing dates directly on your project timelines.
+            </p>
+            <div style="font-size: 0.78rem; color: var(--text-muted); background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 6px;">
+              <strong>Permissions:</strong> user_profile, user_media
+            </div>
+            <div id="toggles-instagram" style="display: none; padding: 6px 0;">
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: #c4b5fd; cursor: pointer;">
+                <input type="checkbox" id="chkPlanning-instagram" onchange="window.novaSettings.togglePlanningPermission('instagram', this.checked)" checked>
+                <span>Use Instagram for planning</span>
+              </label>
+            </div>
+            <div style="display: flex; gap: 8px; margin-top: auto;" id="actions-instagram">
+              <button class="btn btn-outline" onclick="window.novaSettings.connectProvider('instagram')" style="flex:1; font-size: 0.85rem;">Connect</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: PROFILE (Secondary) -->
+    <div id="settingsSectionProfile" style="display: none;">
+      <div class="glass-panel" style="padding: 24px; margin-bottom: 24px;">
+        <h3 style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px;"><i data-lucide="user" style="width:18px; height:18px;"></i> User Profile</h3>
+        <div style="display: flex; flex-direction: column; gap: 16px; max-width: 500px;">
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <label style="color: var(--text-secondary); font-size: 0.85rem; font-weight: 500;">Display Name</label>
+            <input type="text" id="settingsName" placeholder="Your name" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); color: var(--text-primary); padding: 12px 16px; border-radius: var(--radius-md); font-size: 0.95rem;">
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <label style="color: var(--text-secondary); font-size: 0.85rem; font-weight: 500;">Primary Goal</label>
+            <select id="settingsGoal" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border-color); color: var(--text-primary); padding: 12px 16px; border-radius: var(--radius-md); font-size: 0.95rem;">
+              <option value="Work">Work</option>
+              <option value="Study">Study</option>
+              <option value="Personal">Personal</option>
+              <option value="Mixed">Mixed</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="window.novaSettings.saveProfile()" style="margin-top: 4px; width: fit-content;">Save Profile</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: API KEYS & DEVELOPER CREDENTIALS -->
+    <div id="settingsSectionCredentials" style="display: none;">
+      <div class="glass-panel" style="padding: 24px; margin-bottom: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <h3 style="margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
+              <i data-lucide="key" style="width:20px; height:20px; color: #38bdf8;"></i> API Keys & Developer Credentials
+            </h3>
+            <p class="text-secondary" style="font-size: 0.88rem; margin: 0; line-height: 1.45;">
+              Configure your own personal client IDs and API secrets for Spotify, Discord, and Gemini. Credentials are tied directly to your account — no code modifications required.
+            </p>
+          </div>
+          <button class="btn btn-secondary" onclick="window.novaSettings.loadCredentialsView()" style="font-size: 0.82rem; padding: 7px 13px; display: flex; align-items: center; gap: 6px;">
+            <i data-lucide="refresh-cw" style="width:14px; height:14px;"></i> Refresh Keys
+          </button>
+        </div>
+
+        <!-- Service Cards Grid -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px;">
+          
+          <!-- 1. SPOTIFY -->
+          <div class="connector-card glass-panel-elevated" style="padding: 22px; border: 1px solid rgba(29, 185, 84, 0.35); border-radius: var(--radius-lg); display: flex; flex-direction: column; gap: 14px;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 42px; height: 42px; border-radius: 12px; background: #1DB954; display: flex; align-items: center; justify-content: center; color: #000; font-size: 1.3rem;">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.586 14.424c-.18.295-.563.387-.857.207-2.35-1.435-5.308-1.76-8.793-.963-.335.077-.67-.133-.746-.468-.077-.334.132-.67.467-.746 3.808-.87 7.076-.496 9.722 1.115.294.18.386.562.207.855zm1.226-2.723c-.226.367-.706.482-1.072.257-2.69-1.653-6.79-2.133-9.97-1.168-.413.125-.852-.108-.977-.522-.125-.413.108-.852.522-.977 3.633-1.103 8.148-.568 11.24 1.338.366.225.482.705.257 1.072zm.106-2.835C14.692 8.95 8.09 8.732 4.673 9.77c-.502.152-1.034-.132-1.186-.634-.153-.502.132-1.034.634-1.186 3.99-1.21 11.28-.96 15.02 1.26.452.268.6.852.332 1.304-.268.452-.852.6-1.304.332z"/></svg>
+                </div>
+                <div>
+                  <h4 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #f8fafc;">Spotify Developer App</h4>
+                  <span id="badgeSpotifyStatus" style="font-size: 0.76rem; color: #4ade80;">● Configured</span>
+                </div>
+              </div>
+            </div>
+
+            <div style="background: rgba(29, 185, 84, 0.07); border: 1px solid rgba(29, 185, 84, 0.2); border-radius: 8px; padding: 10px 12px; font-size: 0.78rem; color: #cbd5e1; line-height: 1.45;">
+              Redirect URI for <a href="https://developer.spotify.com/dashboard" target="_blank" style="color: #38bdf8; text-decoration: underline;">Spotify Dashboard</a>:
+              <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.5); padding: 5px 8px; border-radius: 6px; margin-top: 5px; font-family: monospace; font-size: 0.76rem; color: #4ade80;">
+                <span id="txtSpotifyRedirect">http://127.0.0.1:3000/spotify-callback</span>
+                <button type="button" onclick="navigator.clipboard.writeText('http://127.0.0.1:3000/spotify-callback'); window.showToast('Copied Spotify Redirect URI', 'success');" style="background: none; border: none; color: #38bdf8; cursor: pointer; font-size: 0.75rem; font-weight: 600;">Copy</button>
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <div>
+                <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px; font-weight: 500;">Spotify Client ID</label>
+                <input type="text" id="devSpotifyClientId" placeholder="e.g. your_spotify_client_id_here" style="width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: #fff; padding: 9px 12px; border-radius: 8px; font-size: 0.85rem; font-family: monospace; box-sizing: border-box;">
+              </div>
+              <div>
+                <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px; font-weight: 500;">Spotify Client Secret</label>
+                <input type="password" id="devSpotifyClientSecret" placeholder="••••••••••••••••••••••••••••••••" style="width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: #fff; padding: 9px 12px; border-radius: 8px; font-size: 0.85rem; box-sizing: border-box;">
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 8px; margin-top: auto;">
+              <button class="btn btn-primary" onclick="window.novaSettings.saveDevCredentials('spotify')" style="flex: 1; background: #1DB954; border-color: #1DB954; color: #000; font-weight: 700; font-size: 0.85rem; padding: 10px;">
+                Save Spotify Keys
+              </button>
+              <button class="btn btn-secondary" onclick="window.novaSettings.startSpotifyOAuth()" style="font-size: 0.85rem; padding: 10px 14px;">
+                Connect
+              </button>
+            </div>
+          </div>
+
+          <!-- 2. DISCORD -->
+          <div class="connector-card glass-panel-elevated" style="padding: 22px; border: 1px solid rgba(88, 101, 242, 0.35); border-radius: var(--radius-lg); display: flex; flex-direction: column; gap: 14px;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 42px; height: 42px; border-radius: 12px; background: #5865F2; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.3rem;">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.929 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.894.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z\"/></svg>
+                </div>
+                <div>
+                  <h4 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #f8fafc;">Discord Application & Bot</h4>
+                  <span id="badgeDiscordStatus" style="font-size: 0.76rem; color: #4ade80;">● Configured</span>
+                </div>
+              </div>
+            </div>
+
+            <div style="background: rgba(88, 101, 242, 0.08); border: 1px solid rgba(88, 101, 242, 0.2); border-radius: 8px; padding: 10px 12px; font-size: 0.78rem; color: #cbd5e1; line-height: 1.45;">
+              Redirect URI for <a href="https://discord.com/developers/applications" target="_blank" style="color: #38bdf8; text-decoration: underline;">Discord Developer Portal</a>:
+              <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.5); padding: 5px 8px; border-radius: 6px; margin-top: 5px; font-family: monospace; font-size: 0.76rem; color: #818cf8;">
+                <span id="txtDiscordRedirect">http://127.0.0.1:3000/discord-callback</span>
+                <button type="button" onclick="navigator.clipboard.writeText('http://127.0.0.1:3000/discord-callback'); window.showToast('Copied Discord Redirect URI', 'success');" style="background: none; border: none; color: #38bdf8; cursor: pointer; font-size: 0.75rem; font-weight: 600;">Copy</button>
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <div>
+                <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px; font-weight: 500;">Discord Application / Client ID</label>
+                <input type="text" id="devDiscordClientId" placeholder="e.g. your_discord_application_id" style="width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: #fff; padding: 9px 12px; border-radius: 8px; font-size: 0.85rem; font-family: monospace; box-sizing: border-box;">
+              </div>
+              <div>
+                <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px; font-weight: 500;">Discord Client Secret</label>
+                <input type="password" id="devDiscordClientSecret" placeholder="••••••••••••••••••••••••••••••••" style="width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: #fff; padding: 9px 12px; border-radius: 8px; font-size: 0.85rem; box-sizing: border-box;">
+              </div>
+              <div>
+                <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px; font-weight: 500;">Discord Bot Token (Optional — enables server channels)</label>
+                <input type="password" id="devDiscordBotToken" placeholder="Bot Token from Bot tab" style="width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: #fff; padding: 9px 12px; border-radius: 8px; font-size: 0.85rem; box-sizing: border-box;">
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 8px; margin-top: auto;">
+              <button class="btn btn-primary" onclick="window.novaSettings.saveDevCredentials('discord')" style="flex: 1; background: #5865F2; border-color: #5865F2; color: #fff; font-weight: 700; font-size: 0.85rem; padding: 10px;">
+                Save Discord Keys
+              </button>
+              <button class="btn btn-secondary" onclick="window.novaSettings.startDiscordOAuth()" style="font-size: 0.85rem; padding: 10px 14px;">
+                Connect
+              </button>
+            </div>
+          </div>
+
+          <!-- 3. GOOGLE GEMINI AI -->
+          <div class="connector-card glass-panel-elevated" style="padding: 22px; border: 1px solid rgba(168, 85, 247, 0.35); border-radius: var(--radius-lg); display: flex; flex-direction: column; gap: 14px;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 42px; height: 42px; border-radius: 12px; background: linear-gradient(135deg, #a855f7, #6366f1); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.3rem;">
+                  ✨
+                </div>
+                <div>
+                  <h4 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #f8fafc;">Google Gemini AI Key</h4>
+                  <span id="badgeGeminiStatus" style="font-size: 0.76rem; color: #4ade80;">● Active</span>
+                </div>
+              </div>
+            </div>
+
+            <p style="font-size: 0.82rem; color: var(--text-secondary); margin: 0; line-height: 1.45;">
+              Powers NOVA's Executive Day Planning Engine and Intelligent Assistant. Free key at <a href="https://aistudio.google.com/" target="_blank" style="color: #38bdf8; text-decoration: underline;">Google AI Studio</a>.
+            </p>
+
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <div>
+                <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px; font-weight: 500;">Gemini API Key</label>
+                <input type="password" id="devGeminiApiKey" placeholder="AIzaSy..." style="width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: #fff; padding: 9px 12px; border-radius: 8px; font-size: 0.85rem; box-sizing: border-box;">
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 8px; margin-top: auto;">
+              <button class="btn btn-primary" onclick="window.novaSettings.saveDevCredentials('gemini')" style="width: 100%; background: linear-gradient(135deg, #a855f7, #6366f1); border: none; color: #fff; font-weight: 700; font-size: 0.85rem; padding: 10px;">
+                Save Gemini Key
+              </button>
+            </div>
+          </div>
+
+          <!-- 4. GOOGLE CALENDAR -->
+          <div class="connector-card glass-panel-elevated" style="padding: 22px; border: 1px solid rgba(66, 133, 244, 0.35); border-radius: var(--radius-lg); display: flex; flex-direction: column; gap: 14px;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 42px; height: 42px; border-radius: 12px; background: linear-gradient(135deg, #4285F4, #34A853); display: flex; align-items: center; justify-content: center; font-size: 1.3rem;">
+                  📅
+                </div>
+                <div>
+                  <h4 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #f8fafc;">Google Calendar & iCal</h4>
+                  <span id="badgeGcalStatus" style="font-size: 0.76rem; color: #4ade80;">● Connected</span>
+                </div>
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <div>
+                <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px; font-weight: 500;">Google Calendar Secret iCal URL</label>
+                <input type="text" id="devGcalIcalUrl" placeholder="https://calendar.google.com/calendar/ical/.../basic.ics" style="width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: #fff; padding: 9px 12px; border-radius: 8px; font-size: 0.85rem; box-sizing: border-box;">
+              </div>
+              <div>
+                <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px; font-weight: 500;">Google OAuth Client ID (Optional)</label>
+                <input type="text" id="devGoogleClientId" placeholder="apps.googleusercontent.com" style="width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: #fff; padding: 9px 12px; border-radius: 8px; font-size: 0.85rem; font-family: monospace; box-sizing: border-box;">
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 8px; margin-top: auto;">
+              <button class="btn btn-primary" onclick="window.novaSettings.saveDevCredentials('google_calendar')" style="width: 100%; background: #4285F4; border-color: #4285F4; color: #fff; font-weight: 700; font-size: 0.85rem; padding: 10px;">
+                Save Google Calendar Settings
+              </button>
+            </div>
+          </div>
+
+          <!-- 5. INSTAGRAM -->
+          <div class="connector-card glass-panel-elevated" style="padding: 22px; border: 1px solid rgba(225, 48, 108, 0.35); border-radius: var(--radius-lg); display: flex; flex-direction: column; gap: 14px;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 42px; height: 42px; border-radius: 12px; background: linear-gradient(135deg, #833AB4, #FD1D1D, #F77737); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.3rem;">
+                  📸
+                </div>
+                <div>
+                  <h4 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #f8fafc;">Instagram Display API</h4>
+                  <span id="badgeInstagramStatus" style="font-size: 0.76rem; color: #94a3b8;">○ Optional</span>
+                </div>
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <div>
+                <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px; font-weight: 500;">Meta App ID</label>
+                <input type="text" id="devInstagramClientId" placeholder="Instagram App ID" style="width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: #fff; padding: 9px 12px; border-radius: 8px; font-size: 0.85rem; font-family: monospace; box-sizing: border-box;">
+              </div>
+              <div>
+                <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px; font-weight: 500;">Meta App Secret</label>
+                <input type="password" id="devInstagramClientSecret" placeholder="••••••••••••••••••••••••••••••••" style="width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: #fff; padding: 9px 12px; border-radius: 8px; font-size: 0.85rem; box-sizing: border-box;">
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 8px; margin-top: auto;">
+              <button class="btn btn-primary" onclick="window.novaSettings.saveDevCredentials('instagram')" style="width: 100%; background: linear-gradient(135deg, #833AB4, #FD1D1D, #F77737); border: none; color: #fff; font-weight: 700; font-size: 0.85rem; padding: 10px;">
+                Save Instagram Keys
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+      </div>
+  </template>
+
+  <!-- Dedicated API Credentials Template for Direct Nav Route (#credentials) -->
+  <template id="tpl-credentials">
+    <div class="view-header">
+      <div style="display: flex; align-items: center; gap: 8px; font-size: 0.88rem; color: var(--text-muted); margin-bottom: 4px;">
+        <span>Command Center</span>
+        <span>→</span>
+        <span style="color: var(--accent-primary); font-weight: 500;">API Credentials</span>
+      </div>
+      <h1>API Keys & Developer Credentials</h1>
+      <p class="text-secondary">Configure your personal Spotify, Discord, and Gemini API keys without editing source code or terminal files.</p>
+    </div>
+
+    <!-- Inject the credentials section content -->
+    <div id="credentialsPageContainer">
+      <div class="glass-panel" style="padding: 24px; margin-bottom: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <h3 style="margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
+              <i data-lucide="shield-check" style="width:20px; height:20px; color: #10b981;"></i> Custom Developer Credentials
+            </h3>
+            <p class="text-secondary" style="font-size: 0.88rem; margin: 0; line-height: 1.45;">
+              Every user on this system has their own isolated API configurations. Save keys here and they immediately activate your live integrations.
+            </p>
+          </div>
+          <button class="btn btn-secondary" onclick="window.novaSettings.loadCredentialsView()" style="font-size: 0.82rem; padding: 7px 13px; display: flex; align-items: center; gap: 6px;">
+            <i data-lucide="refresh-cw" style="width:14px; height:14px;"></i> Refresh Status
+          </button>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px;">
+          <!-- Repeat of the cards with matching dev IDs -->
+          <div class="connector-card glass-panel-elevated" style="padding: 22px; border: 1px solid rgba(29, 185, 84, 0.35); border-radius: var(--radius-lg); display: flex; flex-direction: column; gap: 14px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div style="width: 42px; height: 42px; border-radius: 12px; background: #1DB954; display: flex; align-items: center; justify-content: center; color: #000; font-size: 1.3rem;">🎵</div>
+              <div>
+                <h4 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #f8fafc;">Spotify Developer App</h4>
+                <span id="badgeSpotifyStatusPage" style="font-size: 0.76rem; color: #4ade80;">● Configured</span>
+              </div>
+            </div>
+            <div style="background: rgba(29, 185, 84, 0.07); border: 1px solid rgba(29, 185, 84, 0.2); border-radius: 8px; padding: 10px 12px; font-size: 0.78rem; color: #cbd5e1;">
+              Redirect URI: <code style="color:#4ade80;">http://127.0.0.1:3000/spotify-callback</code>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <div>
+                <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px;">Spotify Client ID</label>
+                <input type="text" id="pageSpotifyClientId" placeholder="Spotify Client ID" style="width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: #fff; padding: 9px 12px; border-radius: 8px; font-size: 0.85rem; font-family: monospace; box-sizing: border-box;">
+              </div>
+              <div>
+                <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px;">Spotify Client Secret</label>
+                <input type="password" id="pageSpotifyClientSecret" placeholder="••••••••••••••••" style="width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: #fff; padding: 9px 12px; border-radius: 8px; font-size: 0.85rem; box-sizing: border-box;">
+              </div>
+            </div>
+            <button class="btn btn-primary" onclick="window.novaSettings.saveDevCredentialsPage('spotify')" style="background: #1DB954; border-color: #1DB954; color: #000; font-weight: 700; font-size: 0.85rem; padding: 10px; margin-top: auto;">
+              Save Spotify Credentials
+            </button>
+          </div>
+
+          <div class="connector-card glass-panel-elevated" style="padding: 22px; border: 1px solid rgba(88, 101, 242, 0.35); border-radius: var(--radius-lg); display: flex; flex-direction: column; gap: 14px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div style="width: 42px; height: 42px; border-radius: 12px; background: #5865F2; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.3rem;">💬</div>
+              <div>
+                <h4 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #f8fafc;">Discord Application</h4>
+                <span id="badgeDiscordStatusPage" style="font-size: 0.76rem; color: #4ade80;">● Configured</span>
+              </div>
+            </div>
+            <div style="background: rgba(88, 101, 242, 0.08); border: 1px solid rgba(88, 101, 242, 0.2); border-radius: 8px; padding: 10px 12px; font-size: 0.78rem; color: #cbd5e1;">
+              Redirect URI: <code style="color:#818cf8;">http://127.0.0.1:3000/discord-callback</code>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <div>
+                <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px;">Discord Client ID</label>
+                <input type="text" id="pageDiscordClientId" placeholder="Discord Client ID" style="width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: #fff; padding: 9px 12px; border-radius: 8px; font-size: 0.85rem; font-family: monospace; box-sizing: border-box;">
+              </div>
+              <div>
+                <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px;">Discord Client Secret</label>
+                <input type="password" id="pageDiscordClientSecret" placeholder="••••••••••••••••" style="width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: #fff; padding: 9px 12px; border-radius: 8px; font-size: 0.85rem; box-sizing: border-box;">
+              </div>
+              <div>
+                <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px;">Discord Bot Token</label>
+                <input type="password" id="pageDiscordBotToken" placeholder="Bot Token for reading channels" style="width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: #fff; padding: 9px 12px; border-radius: 8px; font-size: 0.85rem; box-sizing: border-box;">
+              </div>
+            </div>
+            <button class="btn btn-primary" onclick="window.novaSettings.saveDevCredentialsPage('discord')" style="background: #5865F2; border-color: #5865F2; color: #fff; font-weight: 700; font-size: 0.85rem; padding: 10px; margin-top: auto;">
+              Save Discord Credentials
+            </button>
+          </div>
+
+          <div class="connector-card glass-panel-elevated" style="padding: 22px; border: 1px solid rgba(168, 85, 247, 0.35); border-radius: var(--radius-lg); display: flex; flex-direction: column; gap: 14px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div style="width: 42px; height: 42px; border-radius: 12px; background: linear-gradient(135deg, #a855f7, #6366f1); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.3rem;">✨</div>
+              <div>
+                <h4 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #f8fafc;">Gemini AI API Key</h4>
+                <span id="badgeGeminiStatusPage" style="font-size: 0.76rem; color: #4ade80;">● Active</span>
+              </div>
+            </div>
+            <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0;">Powers planner and chat engine.</p>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <div>
+                <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px;">Gemini API Key</label>
+                <input type="password" id="pageGeminiApiKey" placeholder="AIzaSy..." style="width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: #fff; padding: 9px 12px; border-radius: 8px; font-size: 0.85rem; box-sizing: border-box;">
+              </div>
+            </div>
+            <button class="btn btn-primary" onclick="window.novaSettings.saveDevCredentialsPage('gemini')" style="background: linear-gradient(135deg, #a855f7, #6366f1); border: none; color: #fff; font-weight: 700; font-size: 0.85rem; padding: 10px; margin-top: auto;">
+              Save Gemini Key
+            </button>
+          </div>
+
+          <!-- 4. Google Calendar & iCal -->
+          <div class="connector-card glass-panel-elevated" style="padding: 22px; border: 1px solid rgba(66, 133, 244, 0.35); border-radius: var(--radius-lg); display: flex; flex-direction: column; gap: 14px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div style="width: 42px; height: 42px; border-radius: 12px; background: linear-gradient(135deg, #4285F4, #34A853); display: flex; align-items: center; justify-content: center; font-size: 1.3rem;">📅</div>
+              <div>
+                <h4 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #f8fafc;">Google Calendar & iCal</h4>
+                <span id="badgeGcalStatusPage" style="font-size: 0.76rem; color: #4ade80;">● Connected</span>
+              </div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <div>
+                <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px;">Google Calendar Secret iCal URL</label>
+                <input type="text" id="pageGcalIcalUrl" placeholder="https://calendar.google.com/calendar/ical/.../basic.ics" style="width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: #fff; padding: 9px 12px; border-radius: 8px; font-size: 0.85rem; box-sizing: border-box;">
+              </div>
+              <div>
+                <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px;">Google OAuth Client ID (Optional)</label>
+                <input type="text" id="pageGoogleClientId" placeholder="apps.googleusercontent.com" style="width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: #fff; padding: 9px 12px; border-radius: 8px; font-size: 0.85rem; font-family: monospace; box-sizing: border-box;">
+              </div>
+            </div>
+            <button class="btn btn-primary" onclick="window.novaSettings.saveDevCredentialsPage('google_calendar')" style="background: #4285F4; border-color: #4285F4; color: #fff; font-weight: 700; font-size: 0.85rem; padding: 10px; margin-top: auto;">
+              Save Google Calendar Settings
+            </button>
+          </div>
+
+          <!-- 5. Instagram -->
+          <div class="connector-card glass-panel-elevated" style="padding: 22px; border: 1px solid rgba(225, 48, 108, 0.35); border-radius: var(--radius-lg); display: flex; flex-direction: column; gap: 14px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div style="width: 42px; height: 42px; border-radius: 12px; background: linear-gradient(135deg, #833AB4, #FD1D1D, #F77737); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.3rem;">📸</div>
+              <div>
+                <h4 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #f8fafc;">Instagram Display API</h4>
+                <span id="badgeInstagramStatusPage" style="font-size: 0.76rem; color: #94a3b8;">○ Optional</span>
+              </div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <div>
+                <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px;">Meta App ID</label>
+                <input type="text" id="pageInstagramClientId" placeholder="Instagram App ID" style="width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: #fff; padding: 9px 12px; border-radius: 8px; font-size: 0.85rem; font-family: monospace; box-sizing: border-box;">
+              </div>
+              <div>
+                <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px;">Meta App Secret</label>
+                <input type="password" id="pageInstagramClientSecret" placeholder="••••••••••••••••" style="width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: #fff; padding: 9px 12px; border-radius: 8px; font-size: 0.85rem; box-sizing: border-box;">
+              </div>
+            </div>
+            <button class="btn btn-primary" onclick="window.novaSettings.saveDevCredentialsPage('instagram')" style="background: linear-gradient(135deg, #833AB4, #FD1D1D, #F77737); border: none; color: #fff; font-weight: 700; font-size: 0.85rem; padding: 10px; margin-top: auto;">
+              Save Instagram Keys
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <!-- Google Calendar Connection Modal -->
+  <div id="gcalModal" class="modal hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 9999;">
+    <div class="glass-panel" style="width: 100%; max-width: 480px; padding: 28px; border: 1px solid var(--border-highlight); border-radius: var(--radius-lg); position: relative; background: #0e121d;">
+      <button onclick="document.getElementById('gcalModal').classList.add('hidden')" style="position: absolute; top: 18px; right: 18px; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.2rem;">✕</button>
+      
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+        <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #4285F4, #34A853); display: flex; align-items: center; justify-content: center; font-size: 1.4rem;">📅</div>
+        <div>
+          <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700;">Connect Google Calendar</h3>
+          <p class="text-secondary" style="margin: 0; font-size: 0.82rem;">Sync events into NOVA's AI Context Engine</p>
+        </div>
+      </div>
+
+      <!-- Option A: Google OAuth (Official) -->
+      <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 18px; margin-bottom: 16px;">
+        <div style="font-weight: 600; font-size: 0.92rem; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+          <i data-lucide="shield-check" style="width:16px;height:16px;color:#4285F4;"></i> Option 1: Google OAuth 2.0 (Recommended)
+        </div>
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 14px; line-height: 1.4;">
+          Authorizes read-only calendar access directly via Google's OAuth consent screen.
+        </p>
+        <button class="btn btn-primary" onclick="window.novaSettings.connectProvider('google_calendar')" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;">
+          <svg width="16" height="16" viewBox="0 0 24 24">
+            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
+            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
+          </svg>
+          Authorize Google Calendar
+        </button>
+      </div>
+
+      <!-- Option B: Private iCal Feed URL -->
+      <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 18px;">
+        <div style="font-weight: 600; font-size: 0.92rem; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+          <i data-lucide="link" style="width:16px;height:16px;color:#10b981;"></i> Option 2: Secret iCal URL (Instant Sync)
+        </div>
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px; line-height: 1.4;">
+          Paste your Google Calendar "Secret address in iCal format". Found in Google Calendar Settings → Settings for my calendars → Integrate calendar.
+        </p>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <input type="url" id="gcalIcalInput" placeholder="https://calendar.google.com/calendar/ical/.../basic.ics" style="background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: white; padding: 10px 14px; border-radius: var(--radius-md); font-size: 0.85rem;">
+          <button class="btn btn-secondary" onclick="window.novaSettings.connectIcal()" style="width: 100%;">
+            Sync iCal Feed
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Spotify Connection Modal -->
+  <div id="spotifyModal" class="modal hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 9999;">
+    <div class="glass-panel" style="width: 100%; max-width: 440px; padding: 28px; border: 1px solid var(--border-highlight); border-radius: var(--radius-lg); position: relative; background: #0e121d; box-shadow: 0 16px 40px rgba(0,0,0,0.6);">
+      <button onclick="document.getElementById('spotifyModal').classList.add('hidden')" style="position: absolute; top: 16px; right: 16px; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.2rem; line-height: 1;" aria-label="Close modal">✕</button>
+      
+      <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 16px;">
+        <div style="width: 44px; height: 44px; border-radius: 12px; background: #1DB954; display: flex; align-items: center; justify-content: center; color: #000; box-shadow: 0 4px 14px rgba(29, 185, 84, 0.35);">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.586 14.424c-.18.295-.563.387-.857.207-2.35-1.435-5.308-1.76-8.793-.963-.335.077-.67-.133-.746-.468-.077-.334.132-.67.467-.746 3.808-.87 7.076-.496 9.722 1.115.294.18.386.562.207.855zm1.226-2.723c-.226.367-.706.482-1.072.257-2.69-1.653-6.79-2.133-9.97-1.168-.413.125-.852-.108-.977-.522-.125-.413.108-.852.522-.977 3.633-1.103 8.148-.568 11.24 1.338.366.225.482.705.257 1.072zm.106-2.835C14.692 8.95 8.09 8.732 4.673 9.77c-.502.152-1.034-.132-1.186-.634-.153-.502.132-1.034.634-1.186 3.99-1.21 11.28-.96 15.02 1.26.452.268.6.852.332 1.304-.268.452-.852.6-1.304.332z"/></svg>
+        </div>
+        <h3 style="margin: 0; font-size: 1.25rem; font-weight: 700; color: #f8fafc;">Connect Spotify</h3>
+      </div>
+
+      <p style="font-size: 0.92rem; color: #94a3b8; margin: 0 0 24px 0; line-height: 1.55;">
+        Connect your Spotify account to let NOVA understand your listening preferences and focus sessions.
+      </p>
+
+      <button id="btnConnectSpotifyOAuth" class="btn" onclick="window.novaSettings.startSpotifyOAuth()" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; background: #1DB954; color: #000; font-weight: 700; font-size: 1rem; padding: 13px 20px; border-radius: 10px; box-shadow: 0 4px 18px rgba(29, 185, 84, 0.35); border: none; cursor: pointer; transition: all 0.2s; margin-bottom: 20px;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.586 14.424c-.18.295-.563.387-.857.207-2.35-1.435-5.308-1.76-8.793-.963-.335.077-.67-.133-.746-.468-.077-.334.132-.67.467-.746 3.808-.87 7.076-.496 9.722 1.115.294.18.386.562.207.855zm1.226-2.723c-.226.367-.706.482-1.072.257-2.69-1.653-6.79-2.133-9.97-1.168-.413.125-.852-.108-.977-.522-.125-.413.108-.852.522-.977 3.633-1.103 8.148-.568 11.24 1.338.366.225.482.705.257 1.072zm.106-2.835C14.692 8.95 8.09 8.732 4.673 9.77c-.502.152-1.034-.132-1.186-.634-.153-.502.132-1.034.634-1.186 3.99-1.21 11.28-.96 15.02 1.26.452.268.6.852.332 1.304-.268.452-.852.6-1.304.332z"/></svg>
+        Connect Spotify
+      </button>
+
+      <div style="font-size: 0.8rem; color: #64748b; text-align: center; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 14px;">
+        NOVA will only access the Spotify information you authorize.
+      </div>
+    </div>
+  </div>
+
+  <!-- Manage Integration Modal -->
+  <div id="manageModal" class="modal hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 9999;">
+    <div class="glass-panel" style="width: 100%; max-width: 440px; padding: 26px; border: 1px solid var(--border-highlight); border-radius: var(--radius-lg); position: relative; background: #0e121d;">
+      <button onclick="document.getElementById('manageModal').classList.add('hidden')" style="position: absolute; top: 18px; right: 18px; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.2rem;">✕</button>
+
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 18px;">
+        <div id="manageModalIcon" style="width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem;">🔌</div>
+        <div>
+          <h3 id="manageModalTitle" style="margin: 0; font-size: 1.1rem; font-weight: 700;">Manage Integration</h3>
+          <span style="display: inline-block; font-size: 0.78rem; color: #4ade80;">● Connected</span>
+        </div>
+      </div>
+
+      <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 16px; margin-bottom: 18px;">
+        <h4 style="margin: 0 0 10px; font-size: 0.88rem; color: var(--text-secondary);">Permissions & AI Context Control</h4>
+        <label style="display: flex; align-items: center; gap: 10px; font-size: 0.85rem; color: #f8fafc; cursor: pointer;">
+          <input type="checkbox" id="manageModalPlanningToggle" checked onchange="window.novaSettings.toggleCurrentModalPlanning(this.checked)">
+          <span id="manageModalToggleLabel">Use this service for AI planning</span>
+        </label>
+        <p style="margin: 8px 0 0 24px; font-size: 0.78rem; color: var(--text-muted);">
+          When enabled, normalized schedules and items are securely supplied to Gemini AI to construct your optimized daily plan.
+        </p>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; gap: 10px;">
+        <button class="btn btn-secondary" onclick="document.getElementById('manageModal').classList.add('hidden')" style="flex:1;">Done</button>
+        <button class="btn btn-outline" id="manageModalDisconnectBtn" style="flex:1; border-color:#ef4444; color:#ef4444; background: rgba(239, 68, 68, 0.1);">Disconnect</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- App Credentials & Developer Setup Modal (Self-service API Keys for all integrations) -->
+  <div id="credentialsModal" class="modal hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 9999;">
+    <div class="glass-panel" style="width: 100%; max-width: 540px; padding: 28px; border: 1px solid var(--border-highlight); border-radius: var(--radius-lg); position: relative; background: #0e121d; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 50px rgba(0,0,0,0.7);">
+      <button onclick="document.getElementById('credentialsModal').classList.add('hidden')" style="position: absolute; top: 18px; right: 18px; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.2rem;" aria-label="Close modal">✕</button>
+
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 14px;">
+        <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #0284c7, #38bdf8); display: flex; align-items: center; justify-content: center; font-size: 1.3rem;">🔑</div>
+        <div>
+          <h3 style="margin: 0; font-size: 1.2rem; font-weight: 700; color: #f8fafc;">App Credentials & API Keys</h3>
+          <p class="text-secondary" style="margin: 0; font-size: 0.82rem;">Configure OAuth Client IDs without touching code or terminal</p>
+        </div>
+      </div>
+
+      <!-- Provider Tabs -->
+      <div style="display: flex; gap: 6px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-bottom: 18px; overflow-x: auto;">
+        <button class="btn" id="tabBtnSpotify" onclick="window.novaSettings.switchCredentialsTab('spotify')" style="font-size: 0.8rem; padding: 6px 12px; border-radius: 8px; background: #1DB954; color: #000; font-weight: 700;">Spotify</button>
+        <button class="btn" id="tabBtnDiscord" onclick="window.novaSettings.switchCredentialsTab('discord')" style="font-size: 0.8rem; padding: 6px 12px; border-radius: 8px; background: rgba(255,255,255,0.06); color: #cbd5e1;">Discord</button>
+        <button class="btn" id="tabBtnInstagram" onclick="window.novaSettings.switchCredentialsTab('instagram')" style="font-size: 0.8rem; padding: 6px 12px; border-radius: 8px; background: rgba(255,255,255,0.06); color: #cbd5e1;">Instagram</button>
+        <button class="btn" id="tabBtnGoogle" onclick="window.novaSettings.switchCredentialsTab('google_calendar')" style="font-size: 0.8rem; padding: 6px 12px; border-radius: 8px; background: rgba(255,255,255,0.06); color: #cbd5e1;">Google Calendar</button>
+      </div>
+
+      <!-- Panel: Spotify -->
+      <div id="panelSpotify" class="cred-tab-panel">
+        <div style="background: rgba(29, 185, 84, 0.08); border: 1px solid rgba(29, 185, 84, 0.25); border-radius: 10px; padding: 14px; margin-bottom: 14px;">
+          <div style="font-weight: 600; font-size: 0.9rem; color: #1ed760; margin-bottom: 4px;">Spotify OAuth 2.0 PKCE</div>
+          <p style="font-size: 0.8rem; color: #94a3b8; margin: 0; line-height: 1.45;">
+            Zero browser secrets required. Register this exact redirect URI in your <a href="https://developer.spotify.com/dashboard" target="_blank" style="color: #38bdf8; text-decoration: underline;">Spotify Developer Dashboard</a>:
+            <code style="display: block; background: rgba(0,0,0,0.5); padding: 5px 8px; border-radius: 6px; margin-top: 6px; color: #f8fafc; font-family: monospace; font-size: 0.78rem;">http://127.0.0.1:3000/spotify-callback</code>
+          </p>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div>
+            <label style="display: block; font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 5px; font-weight: 500;">Spotify Client ID</label>
+            <input type="text" id="cfgSpotifyClientId" placeholder="e.g. your_spotify_client_id_here" style="width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: white; padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; font-family: monospace;">
+          </div>
+          <button class="btn btn-primary" onclick="window.novaSettings.saveCredentialsFromModal('spotify')" style="background: #1DB954; color: #000; border: none; font-weight: 700; padding: 11px; margin-top: 4px;">Save Spotify Credentials</button>
+        </div>
+      </div>
+
+      <!-- Panel: Discord -->
+      <div id="panelDiscord" class="cred-tab-panel hidden">
+        <div style="background: rgba(88, 101, 242, 0.08); border: 1px solid rgba(88, 101, 242, 0.25); border-radius: 10px; padding: 14px; margin-bottom: 14px;">
+          <div style="font-weight: 600; font-size: 0.9rem; color: #818cf8; margin-bottom: 4px;">Discord OAuth2 & Bot Alerts</div>
+          <p style="font-size: 0.8rem; color: #94a3b8; margin: 0; line-height: 1.45;">
+            Register this exact Redirect URI in your <a href="https://discord.com/developers/applications" target="_blank" style="color: #38bdf8; text-decoration: underline;">Discord Developer Portal</a>:
+            <code style="display: block; background: rgba(0,0,0,0.5); padding: 5px 8px; border-radius: 6px; margin-top: 6px; color: #f8fafc; font-family: monospace; font-size: 0.78rem;">http://127.0.0.1:3000/discord-callback</code>
+          </p>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div>
+            <label style="display: block; font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 5px; font-weight: 500;">Discord Client ID</label>
+            <input type="text" id="cfgDiscordClientId" placeholder="e.g. 123456789012345678" style="width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: white; padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; font-family: monospace;">
+          </div>
+          <div>
+            <label style="display: block; font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 5px; font-weight: 500;">Discord Client Secret (Server-side only)</label>
+            <input type="password" id="cfgDiscordClientSecret" placeholder="••••••••••••••••••••••••••••••••" style="width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: white; padding: 10px 14px; border-radius: 8px; font-size: 0.85rem;">
+          </div>
+          <div>
+            <label style="display: block; font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 5px; font-weight: 500;">Discord Bot Token (Optional — for direct server channel reads)</label>
+            <input type="password" id="cfgDiscordBotToken" placeholder="Bot token from Discord Developer Portal" style="width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: white; padding: 10px 14px; border-radius: 8px; font-size: 0.85rem;">
+          </div>
+          <button class="btn btn-primary" onclick="window.novaSettings.saveCredentialsFromModal('discord')" style="background: #5865F2; color: #fff; border: none; font-weight: 700; padding: 11px; margin-top: 4px;">Save Discord Credentials</button>
+        </div>
+      </div>
+
+      <!-- Panel: Instagram -->
+      <div id="panelInstagram" class="cred-tab-panel hidden">
+        <div style="background: rgba(225, 48, 108, 0.08); border: 1px solid rgba(225, 48, 108, 0.25); border-radius: 10px; padding: 14px; margin-bottom: 14px;">
+          <div style="font-weight: 600; font-size: 0.9rem; color: #f43f5e; margin-bottom: 4px;">Instagram Basic Display API</div>
+          <p style="font-size: 0.8rem; color: #94a3b8; margin: 0; line-height: 1.45;">
+            Register this redirect URI in Meta for Developers:
+            <code style="display: block; background: rgba(0,0,0,0.5); padding: 5px 8px; border-radius: 6px; margin-top: 6px; color: #f8fafc; font-family: monospace; font-size: 0.78rem;">http://127.0.0.1:3000/instagram-callback</code>
+          </p>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div>
+            <label style="display: block; font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 5px; font-weight: 500;">Instagram App ID</label>
+            <input type="text" id="cfgInstagramClientId" placeholder="Meta App ID" style="width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: white; padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; font-family: monospace;">
+          </div>
+          <div>
+            <label style="display: block; font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 5px; font-weight: 500;">Instagram App Secret</label>
+            <input type="password" id="cfgInstagramClientSecret" placeholder="Meta App Secret" style="width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: white; padding: 10px 14px; border-radius: 8px; font-size: 0.85rem;">
+          </div>
+          <button class="btn btn-primary" onclick="window.novaSettings.saveCredentialsFromModal('instagram')" style="background: linear-gradient(135deg, #833AB4, #FD1D1D, #F77737); color: #fff; border: none; font-weight: 700; padding: 11px; margin-top: 4px;">Save Instagram Credentials</button>
+        </div>
+      </div>
+
+      <!-- Panel: Google Calendar -->
+      <div id="panelGoogle" class="cred-tab-panel hidden">
+        <div style="background: rgba(66, 133, 244, 0.08); border: 1px solid rgba(66, 133, 244, 0.25); border-radius: 10px; padding: 14px; margin-bottom: 14px;">
+          <div style="font-weight: 600; font-size: 0.9rem; color: #60a5fa; margin-bottom: 4px;">Google Cloud OAuth 2.0</div>
+          <p style="font-size: 0.8rem; color: #94a3b8; margin: 0; line-height: 1.45;">
+            Authorized redirect URI in Google Cloud Console:
+            <code style="display: block; background: rgba(0,0,0,0.5); padding: 5px 8px; border-radius: 6px; margin-top: 6px; color: #f8fafc; font-family: monospace; font-size: 0.78rem;">http://localhost:3000/api/auth/google/callback</code>
+          </p>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div>
+            <label style="display: block; font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 5px; font-weight: 500;">Google Client ID</label>
+            <input type="text" id="cfgGoogleClientId" placeholder="e.g. 12345...apps.googleusercontent.com" style="width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: white; padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; font-family: monospace;">
+          </div>
+          <div>
+            <label style="display: block; font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 5px; font-weight: 500;">Google Client Secret</label>
+            <input type="password" id="cfgGoogleClientSecret" placeholder="Google OAuth Client Secret" style="width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: white; padding: 10px 14px; border-radius: 8px; font-size: 0.85rem;">
+          </div>
+          <button class="btn btn-primary" onclick="window.novaSettings.saveCredentialsFromModal('google_calendar')" style="background: #4285F4; color: #fff; border: none; font-weight: 700; padding: 11px; margin-top: 4px;">Save Google Credentials</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Discord Connection Modal -->
+  <div id="discordModal" class="modal hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.75); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 9999;">
+    <div class="glass-panel" style="width: 100%; max-width: 500px; padding: 28px; border: 1px solid var(--border-highlight); border-radius: var(--radius-lg); position: relative; background: #0e121d; box-shadow: 0 16px 40px rgba(0,0,0,0.6); max-height: 90vh; overflow-y: auto;">
+      <button onclick="document.getElementById('discordModal').classList.add('hidden')" style="position: absolute; top: 16px; right: 16px; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.2rem;" aria-label="Close modal">✕</button>
+
+      <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 14px;">
+        <div style="width: 46px; height: 46px; border-radius: 12px; background: #5865F2; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.4rem; box-shadow: 0 4px 14px rgba(88, 101, 242, 0.35);">
+          💬
+        </div>
+        <div>
+          <h3 style="margin: 0; font-size: 1.25rem; font-weight: 700; color: #f8fafc;">Connect Discord</h3>
+          <p class="text-secondary" style="margin: 0; font-size: 0.82rem;">Message triage & academic / team deadline monitor</p>
+        </div>
+      </div>
+
+      <p style="font-size: 0.88rem; color: #94a3b8; margin: 0 0 18px 0; line-height: 1.5;">
+        Connect your Discord account to let NOVA analyze incoming server messages, highlight urgent deadlines, and notify you about what matters.
+      </p>
+
+      <!-- Primary Action: Connect OAuth or Instant Live Sync -->
+      <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px;">
+        <button id="btnConnectDiscordOAuth" class="btn" onclick="window.novaSettings.startDiscordOAuth()" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; background: #5865F2; color: #fff; font-weight: 700; font-size: 0.98rem; padding: 13px 20px; border-radius: 10px; box-shadow: 0 4px 18px rgba(88, 101, 242, 0.35); border: none; cursor: pointer; transition: all 0.2s;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.929 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.894.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
+          Connect Discord (OAuth2)
+        </button>
+        <button class="btn btn-secondary" onclick="window.novaSettings.syncDiscordQuickLive()" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.85rem; padding: 11px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.03);">
+          ⚡ Instant Live Sync (Preview Server Alerts)
+        </button>
+      </div>
+
+      <!-- In-Modal Credentials Setup Form -->
+      <div style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 16px;">
+        <button onclick="document.getElementById('discordInlineCredsArea').classList.toggle('hidden')" style="background: none; border: none; color: #38bdf8; font-size: 0.84rem; cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 0; font-weight: 600;">
+          <span>⚙️ Discord Application & Bot Setup</span>
+          <i data-lucide="chevron-down" style="width:14px;height:14px;"></i>
+        </button>
+
+        <div id="discordInlineCredsArea" style="margin-top: 14px; background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 16px;">
+          <!-- Setup Guidance Box -->
+          <div style="background: rgba(88, 101, 242, 0.08); border: 1px solid rgba(88, 101, 242, 0.25); border-radius: 8px; padding: 12px; margin-bottom: 14px; font-size: 0.8rem; line-height: 1.45; color: #cbd5e1;">
+            <div style="font-weight: 700; color: #818cf8; margin-bottom: 4px;">Quick Setup Guide (from Discord Portal):</div>
+            1. Go to <a href="https://discord.com/developers/applications" target="_blank" style="color: #38bdf8; text-decoration: underline;">Discord Developer Portal</a> → New Application.<br>
+            2. Go to <strong>OAuth2 → Redirects</strong> and add:<br>
+            <code style="display: block; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 4px; margin: 4px 0; color: #4ade80; font-family: monospace; font-size: 0.75rem;">http://127.0.0.1:3000/discord-callback</code>
+            3. Paste your <strong>Application (Client) ID</strong> and <strong>Client Secret</strong> below:
+          </div>
+
+          <div style="margin-bottom: 12px;">
+            <label style="font-size: 0.78rem; color: #94a3b8; display: block; margin-bottom: 4px; font-weight: 500;">Discord Application ID (Client ID)</label>
+            <input type="text" id="discordModalClientId" placeholder="e.g. 135248902891234567" style="width: 100%; background: rgba(0,0,0,0.5); border: 1px solid var(--border-color); color: white; padding: 9px 12px; border-radius: 6px; font-size: 0.85rem; font-family: monospace;">
+          </div>
+          <div style="margin-bottom: 12px;">
+            <label style="font-size: 0.78rem; color: #94a3b8; display: block; margin-bottom: 4px; font-weight: 500;">Discord Client Secret</label>
+            <input type="password" id="discordModalClientSecret" placeholder="••••••••••••••••••••••••••••••••" style="width: 100%; background: rgba(0,0,0,0.5); border: 1px solid var(--border-color); color: white; padding: 9px 12px; border-radius: 6px; font-size: 0.85rem;">
+          </div>
+          <div style="margin-bottom: 14px;">
+            <label style="font-size: 0.78rem; color: #94a3b8; display: block; margin-bottom: 4px; font-weight: 500;">Discord Bot Token (Optional for channel messages)</label>
+            <input type="password" id="discordModalBotToken" placeholder="Bot token from Bot tab" style="width: 100%; background: rgba(0,0,0,0.5); border: 1px solid var(--border-color); color: white; padding: 9px 12px; border-radius: 6px; font-size: 0.85rem;">
+          </div>
+          <button class="btn btn-primary" onclick="window.novaSettings.saveDiscordInlineCredentials()" style="width: 100%; font-size: 0.88rem; padding: 10px; background: #5865F2; border-color: #5865F2; color: #fff; font-weight: 600;">
+            Save Credentials & Connect
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Discord Message Digest & Urgency Triage Modal -->
+  <div id="discordDigestModal" class="modal hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 9999;">
+    <div class="glass-panel" style="width: 100%; max-width: 600px; padding: 26px; border: 1px solid var(--border-highlight); border-radius: var(--radius-lg); position: relative; background: #0e121d; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 50px rgba(0,0,0,0.7);">
+      <button onclick="document.getElementById('discordDigestModal').classList.add('hidden')" style="position: absolute; top: 18px; right: 18px; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.2rem;" aria-label="Close modal">✕</button>
+
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+        <div style="width: 44px; height: 44px; border-radius: 12px; background: #5865F2; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.3rem;">💬</div>
+        <div>
+          <h3 style="margin: 0; font-size: 1.2rem; font-weight: 700; color: #f8fafc;">Discord Messages & Urgency Triage</h3>
+          <span style="font-size: 0.78rem; color: #4ade80;">● Connected to Discord Servers</span>
+        </div>
+      </div>
+
+      <!-- Alert Callout: What you should be worried about -->
+      <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.35); border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+        <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 0.95rem; color: #fca5a5; margin-bottom: 8px;">
+          <span>⚠️ What You Should Be Worried About</span>
+        </div>
+        <p style="font-size: 0.82rem; color: #cbd5e1; margin: 0 0 12px 0; line-height: 1.45;">
+          NOVA analyzed your incoming Discord announcements and pings. The following items require your direct action:
+        </p>
+        <div id="discordWorriedAboutContainer" style="display: flex; flex-direction: column; gap: 8px;">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+
+      <!-- Feed: What messages you got -->
+      <div>
+        <h4 style="margin: 0 0 12px 0; font-size: 0.92rem; color: #f8fafc; display: flex; align-items: center; justify-content: space-between;">
+          <span>📬 Recent Messages & Channel Pings</span>
+          <span id="discordMessageCountBadge" style="font-size: 0.75rem; background: rgba(255,255,255,0.08); padding: 3px 8px; border-radius: 10px; color: #94a3b8;">4 messages</span>
+        </h4>
+        <div id="discordMessagesContainer" style="display: flex; flex-direction: column; gap: 10px;">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+
+      <!-- Quick DM / Ping sync form (collapsible) -->
+      <div id="discordQuickLogArea" class="hidden" style="margin-top: 14px; padding: 14px; background: rgba(88, 101, 242, 0.08); border: 1px dashed rgba(88, 101, 242, 0.4); border-radius: 10px;">
+        <h5 style="margin: 0 0 10px 0; font-size: 0.85rem; color: #f8fafc;">Log New Discord DM or Channel Ping</h5>
+        <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+          <input id="discordLogSender" type="text" placeholder="Sender (@sa1ch_aran)" style="flex: 1; padding: 7px 10px; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); border-radius: 6px; color: #fff; font-size: 0.8rem;" />
+          <input id="discordLogChannel" type="text" placeholder="Channel / DM (@sa1ch_aran)" style="flex: 1; padding: 7px 10px; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); border-radius: 6px; color: #fff; font-size: 0.8rem;" />
+        </div>
+        <textarea id="discordLogContent" rows="2" placeholder="Message content (e.g. important complete nova now fast)..." style="width: 100%; padding: 8px 10px; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); border-radius: 6px; color: #fff; font-size: 0.82rem; margin-bottom: 8px; box-sizing: border-box;"></textarea>
+        <div style="display: flex; justify-content: flex-end; gap: 8px;">
+          <button class="btn btn-secondary" onclick="document.getElementById('discordQuickLogArea').classList.add('hidden')" style="font-size: 0.78rem; padding: 4px 10px;">Cancel</button>
+          <button class="btn btn-primary" onclick="window.novaSettings?.submitDiscordQuickLog()" style="font-size: 0.78rem; padding: 4px 12px; background: #5865F2; border-color: #5865F2;">Sync to NOVA</button>
+        </div>
+      </div>
+
+      <div style="margin-top: 22px; display: flex; justify-content: space-between; align-items: center;">
+        <button class="btn btn-secondary" onclick="document.getElementById('discordQuickLogArea').classList.toggle('hidden')" style="font-size: 0.8rem; display: flex; align-items: center; gap: 6px; border: 1px solid rgba(88,101,242,0.4); color: #818cf8; background: rgba(88,101,242,0.1);">
+          <span>➕ Log Discord DM / Ping</span>
+        </button>
+        <button class="btn btn-secondary" onclick="document.getElementById('discordDigestModal').classList.add('hidden')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Setup Guide Template -->
+  <template id="tpl-setup-guide">
+    <div class="setup-guide-view" style="padding: 30px; max-width: 900px; margin: 0 auto; color: #f8fafc;">
+      <h1 style="font-size: 2rem; margin-bottom: 8px;">Integrations Setup Guide</h1>
+      <p style="color: var(--text-secondary); margin-bottom: 30px;">Follow these steps to connect your external services to NOVA. Once you get the credentials, paste them in <a href="#settings" style="color: var(--accent-primary); text-decoration: none;">Settings > API Keys & Credentials</a>.</p>
+
+
+
+      <div style="display: flex; flex-direction: column; gap: 24px;">
+        
+        <!-- Spotify -->
+        <div class="glass-panel-elevated" style="padding: 24px; border-radius: 12px; border: 1px solid rgba(29, 185, 84, 0.3);">
+          <h2 style="color: #1DB954; margin-top: 0; display: flex; align-items: center; gap: 10px;">
+            <i data-lucide="music" style="width: 24px; height: 24px;"></i> Spotify
+          </h2>
+          <ol style="padding-left: 20px; margin-bottom: 0; color: #cbd5e1; font-size: 0.95rem; line-height: 1.6;">
+            <li>Go to the <a href="https://developer.spotify.com/dashboard" target="_blank" style="color: #1DB954;">Spotify Developer Dashboard</a> and log in.</li>
+            <li>Click <strong>Create App</strong>.</li>
+            <li>Fill in App Name (e.g., "NOVA Planner") and Description.</li>
+            <li>For <strong>Redirect URI</strong>, enter EXACTLY: <code style="background: rgba(0,0,0,0.4); padding: 2px 6px; border-radius: 4px; color: #fff;">http://127.0.0.1:3000/spotify-callback</code></li>
+            <li>Check the "Web API" checkbox (or similar) and save.</li>
+            <li>Once created, click <strong>Settings</strong> to find your <strong>Client ID</strong> and <strong>Client Secret</strong> (click "View client secret").</li>
+            <li>Go to <a href="#settings" style="color: var(--accent-primary);">Settings > API Keys</a> in NOVA, paste both into the Spotify section, and click Save.</li>
+          </ol>
+        </div>
+
+        <!-- Discord -->
+        <div class="glass-panel-elevated" style="padding: 24px; border-radius: 12px; border: 1px solid rgba(88, 101, 242, 0.3);">
+          <h2 style="color: #5865F2; margin-top: 0; display: flex; align-items: center; gap: 10px;">
+            <i data-lucide="message-square" style="width: 24px; height: 24px;"></i> Discord
+          </h2>
+          <ol style="padding-left: 20px; margin-bottom: 0; color: #cbd5e1; font-size: 0.95rem; line-height: 1.6;">
+            <li>Go to the <a href="https://discord.com/developers/applications" target="_blank" style="color: #5865F2;">Discord Developer Portal</a>.</li>
+            <li>Click <strong>New Application</strong> and name it (e.g., "NOVA").</li>
+            <li>Go to the <strong>OAuth2</strong> tab on the left menu.</li>
+            <li>Under <strong>Redirects</strong>, add: <code style="background: rgba(0,0,0,0.4); padding: 2px 6px; border-radius: 4px; color: #fff;">http://127.0.0.1:3000/discord-callback</code></li>
+            <li>Copy the <strong>Client ID</strong> and <strong>Client Secret</strong> (you may need to click "Reset Secret" to see it).</li>
+            <li>Go to <a href="#settings" style="color: var(--accent-primary);">Settings > API Keys</a> in NOVA, paste them in the Discord section, and click Save.</li>
+          </ol>
+        </div>
+
+        <!-- Google Calendar -->
+        <div class="glass-panel-elevated" style="padding: 24px; border-radius: 12px; border: 1px solid rgba(66, 133, 244, 0.3);">
+          <h2 style="color: #4285F4; margin-top: 0; display: flex; align-items: center; gap: 10px;">
+            <i data-lucide="calendar" style="width: 24px; height: 24px;"></i> Google Calendar (iCal method)
+          </h2>
+          <p style="font-size: 0.9rem; color: #94a3b8; margin-top: -10px; margin-bottom: 14px;">The easiest way to connect without setting up Google Cloud OAuth.</p>
+          <ol style="padding-left: 20px; margin-bottom: 0; color: #cbd5e1; font-size: 0.95rem; line-height: 1.6;">
+            <li>Open <a href="https://calendar.google.com" target="_blank" style="color: #4285F4;">Google Calendar</a> on your computer.</li>
+            <li>Hover over your calendar under "My calendars" on the left, click the three dots, and select <strong>Settings and sharing</strong>.</li>
+            <li>Scroll all the way down to the <strong>Integrate calendar</strong> section.</li>
+            <li>Find the <strong>Secret address in iCal format</strong> and copy the URL (it ends in <code>.ics</code>).</li>
+            <li>Go to <a href="#settings" style="color: var(--accent-primary);">Settings > API Keys</a> in NOVA, paste the URL into the Google Calendar section, and click Save.</li>
+          </ol>
+        </div>
+
+        <!-- Gemini AI -->
+        <div class="glass-panel-elevated" style="padding: 24px; border-radius: 12px; border: 1px solid rgba(139, 92, 246, 0.3);">
+          <h2 style="color: #8b5cf6; margin-top: 0; display: flex; align-items: center; gap: 10px;">
+            <i data-lucide="sparkles" style="width: 24px; height: 24px;"></i> Gemini AI
+          </h2>
+          <ol style="padding-left: 20px; margin-bottom: 0; color: #cbd5e1; font-size: 0.95rem; line-height: 1.6;">
+            <li>Go to <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: #8b5cf6;">Google AI Studio</a>.</li>
+            <li>Click <strong>Create API Key</strong>.</li>
+            <li>Copy the API key that is generated.</li>
+            <li>Go to <a href="#settings" style="color: var(--accent-primary);">Settings > API Keys</a> in NOVA, paste it in the Gemini AI section, and click Save.</li>
+          </ol>
+        </div>
+
+      </div>
+    </div>
+  </template>
+
+  <!-- Supabase JS CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <script src="/js/supabase.js"></script>
+  <script src="/js/router.js"></script>
+  <script src="/js/tasks.js"></script>
+  <script src="/js/projects.js"></script>
+  <script src="/js/notes.js"></script>
+  <script src="/js/habits.js"></script>
+  <script src="/js/calendar.js"></script>
+  <script src="/js/planner.js"></script>
+  <script src="/js/ai.js"></script>
+  <script src="/js/settings.js"></script>
+  <script src="/js/app.js"></script>
+  
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>

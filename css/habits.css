@@ -1,0 +1,77 @@
+/* habits.css */
+.habits-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 800px;
+}
+
+.habit-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  transition: border-color var(--transition-fast);
+}
+
+.habit-item:hover {
+  border-color: var(--border-highlight);
+}
+
+.habit-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.habit-name {
+  font-weight: 500;
+  font-size: 1.1rem;
+}
+
+.habit-meta {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.habit-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.habit-streak {
+  font-size: 0.9rem;
+  color: var(--warning);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-check {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-check:hover {
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.btn-check.completed {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: var(--success);
+  color: var(--success);
+}

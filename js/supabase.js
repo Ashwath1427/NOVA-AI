@@ -37,9 +37,52 @@ window.supabaseClient = supabaseInstance;
         
       const sub = subs && subs.length > 0 ? subs[0] : null;
       if (sub && sub.status === 'deactivated') {
-        alert('Your account has been deactivated. Please contact support.');
-        await window.supabaseClient.auth.signOut();
-        window.location.href = '/login.html';
+        // Create a polished full-screen overlay
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+          position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+          background: rgba(10, 10, 10, 0.85); backdrop-filter: blur(12px);
+          z-index: 999999; display: flex; align-items: center; justify-content: center;
+          opacity: 0; transition: opacity 0.5s ease-in-out;
+        `;
+        
+        const card = document.createElement('div');
+        card.style.cssText = `
+          background: #111; border: 1px solid #333; border-radius: 16px;
+          padding: 40px; text-align: center; max-width: 400px;
+          box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05);
+          transform: translateY(20px); transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        `;
+        
+        card.innerHTML = `
+          <div style="width: 64px; height: 64px; background: rgba(239, 68, 68, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px auto;">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+          </div>
+          <h2 style="color: white; font-size: 20px; font-weight: 600; margin-bottom: 12px; font-family: 'Inter', sans-serif;">Account Deactivated</h2>
+          <p style="color: #9ca3af; font-size: 15px; line-height: 1.5; margin-bottom: 24px; font-family: 'Inter', sans-serif;">
+            Your access to NOVA has been suspended. Please contact support to resolve this issue.
+          </p>
+          <div style="width: 24px; height: 24px; border: 2px solid rgba(255,255,255,0.1); border-top-color: #6366f1; border-radius: 50%; margin: 0 auto; animation: spin 1s linear infinite;"></div>
+          <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+        `;
+        
+        overlay.appendChild(card);
+        document.body.appendChild(overlay);
+        
+        // Animate in
+        requestAnimationFrame(() => {
+          overlay.style.opacity = '1';
+          card.style.transform = 'translateY(0)';
+        });
+
+        // Wait 3 seconds, log out, and redirect
+        setTimeout(async () => {
+          await window.supabaseClient.auth.signOut();
+          window.location.href = '/login.html';
+        }, 3000);
       }
     }
   } catch (err) {

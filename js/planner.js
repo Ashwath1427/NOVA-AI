@@ -13,6 +13,24 @@ window.novaPlanner = {
   async initPlanner() {
     this.updateFormattedDate();
     await this.loadTodayPlan();
+
+    // Attach 'C' keyboard shortcut for Quick Complete
+    if (!this.hasAttachedKeydown) {
+      document.addEventListener('keydown', (e) => {
+        // Ignore if user is typing in an input or textarea
+        if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName) || e.target.isContentEditable) {
+          return;
+        }
+        if (e.key === 'c' || e.key === 'C') {
+          const hud = document.getElementById('plannerActiveHud');
+          if (hud && !hud.classList.contains('hidden')) {
+            const btn = document.getElementById('btnCompleteHudTask');
+            if (btn) btn.click();
+          }
+        }
+      });
+      this.hasAttachedKeydown = true;
+    }
   },
 
   loadPlanner() {
@@ -77,6 +95,10 @@ window.novaPlanner = {
         }
       } else {
         this.currentPlan = null;
+        const completeCard = document.getElementById('plannerDayCompleteCard');
+        if (completeCard) completeCard.classList.add('hidden');
+        const hud = document.getElementById('plannerActiveHud');
+        if (hud) hud.classList.add('hidden');
         this.setupPlanControls(false, false);
         this.renderEmptyState();
       }
@@ -119,7 +141,7 @@ window.novaPlanner = {
 
     if (!hasPlan) {
       primaryText.textContent = '✨ Plan My Day';
-      primaryBtn.onclick = () => this.planMyDay(false);
+      primaryBtn.onclick = () => this.planMyDay(true);
       primaryBtn.style.background = 'linear-gradient(135deg, #6366f1, #8b5cf6)';
       primaryBtn.style.opacity = '1';
       if (replanBtn) replanBtn.classList.add('hidden');
@@ -148,6 +170,11 @@ window.novaPlanner = {
     const timelineEl = document.getElementById('plannerTimeline');
     if (!timelineEl) return;
 
+    const completeCard = document.getElementById('plannerDayCompleteCard');
+    if (completeCard) completeCard.classList.add('hidden');
+    const hud = document.getElementById('plannerActiveHud');
+    if (hud) hud.classList.add('hidden');
+
     timelineEl.innerHTML = `
       <div style="text-align: center; padding: 48px 24px;">
         <div style="width: 56px; height: 56px; border-radius: 16px; background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.3); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto; font-size: 1.6rem;">
@@ -159,7 +186,7 @@ window.novaPlanner = {
         <p style="font-size: 0.9rem; color: #94a3b8; max-width: 480px; margin: 0 auto 24px auto; line-height: 1.5;">
           Click <strong>Plan My Day</strong> to let NOVA cross-reference your real Google Calendar events, pending tasks, and priorities to generate an optimal, conflict-free schedule.
         </p>
-        <button class="btn btn-primary" onclick="window.novaPlanner.planMyDay(false)" style="padding: 12px 28px; font-weight: 600; font-size: 0.95rem; border-radius: 10px; background: linear-gradient(135deg, #6366f1, #8b5cf6); box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4); border: none;">
+        <button class="btn btn-primary" onclick="window.novaPlanner.planMyDay(true)" style="padding: 12px 28px; font-weight: 600; font-size: 0.95rem; border-radius: 10px; background: linear-gradient(135deg, #6366f1, #8b5cf6); box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4); border: none;">
           ✨ Plan My Day
         </button>
       </div>
@@ -177,7 +204,7 @@ window.novaPlanner = {
   /**
    * Generates a new plan with realistic 6-step progress feedback
    */
-  async planMyDay(force = false) {
+  async planMyDay(force = true) {
     if (this.isGenerating) return;
     this.isGenerating = true;
 
@@ -220,6 +247,14 @@ window.novaPlanner = {
       const res = await generatePromise;
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}));
+        if (errJson.code === 'TRIAL_EXHAUSTED' || res.status === 403) {
+          if (window.openGeminiSetupModal) {
+            window.openGeminiSetupModal(() => {
+              this.generatePlan(force);
+            });
+          }
+          return;
+        }
         throw new Error(errJson.error || `Server error ${res.status}`);
       }
 
@@ -229,6 +264,8 @@ window.novaPlanner = {
       }
 
       this.currentPlan = json.plan;
+      const completeCard = document.getElementById('plannerDayCompleteCard');
+      if (completeCard) completeCard.classList.add('hidden');
       this.renderTimeline(json.plan.blocks);
       this.setupPlanControls(true, json.plan.activeDayStarted || false);
 
@@ -343,6 +380,14 @@ window.novaPlanner = {
 
     const hudEl = document.getElementById('plannerActiveHud');
     const completeCard = document.getElementById('plannerDayCompleteCard');
+
+    // If there are no blocks in the plan at all
+    if (blocks.length === 0) {
+      if (hudEl) hudEl.classList.add('hidden');
+      if (completeCard) completeCard.classList.add('hidden');
+      if (this.activeHudTimer) clearInterval(this.activeHudTimer);
+      return;
+    }
 
     // If all blocks are completed or skipped
     if (!activeBlock) {
@@ -615,7 +660,7 @@ window.novaPlanner = {
       </div>
       <div style="background: rgba(255,255,255,0.04); padding: 10px 18px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);">
         <span style="color: var(--text-muted); font-size: 0.8rem; display: block;">Execution Rate</span>
-        <span style="color: #60a5fa; font-weight: 700; font-size: 1.1rem;">${total > 0 ? Math.round((completed / total) * 100) : 100}%</span>
+        <span style="color: #60a5fa; font-weight: 700; font-size: 1.1rem;">${total > 0 ? Math.round((completed / total) * 100) : 0}%</span>
       </div>
     `;
   },

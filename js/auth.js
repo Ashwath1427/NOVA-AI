@@ -1,5 +1,5 @@
 // auth.js - Authentication handler for login.html & signup
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   const loginForm = document.getElementById('loginForm');
   const googleLoginBtn = document.getElementById('googleLoginBtn');
   const toggleAuthMode = document.getElementById('toggleAuthMode');
@@ -10,8 +10,46 @@ document.addEventListener('DOMContentLoaded', () => {
   const signInBtn = document.getElementById('signInBtn');
   const switchAuthText = document.getElementById('switchAuthText');
   const forgotPasswordLink = document.getElementById('forgotPasswordLink');
+  const rememberMeCheckbox = document.getElementById('rememberMe');
+  const emailInput = document.getElementById('email');
+  const passwordInput = document.getElementById('password');
 
   let isSignUp = false;
+
+  // 1. Auto-redirect if already logged in and didn't explicitly log out
+  const urlParams = new URLSearchParams(window.location.search);
+  const isExplicitLogout = urlParams.get('logout') === 'true';
+  const hasOnboardingParam = urlParams.get('onboarding') === 'true';
+
+  if (!isExplicitLogout && !hasOnboardingParam && window.supabaseClient && window.supabaseClient.auth) {
+    try {
+      const { data: { session } } = await window.supabaseClient.auth.getSession();
+      if (session) {
+        window.location.href = window.novaPath('app.html');
+        return;
+      }
+    } catch (e) {
+      console.warn("Session check error:", e);
+    }
+  }
+
+  // 2. Pre-fill remembered email and remember me preference
+  const savedEmail = localStorage.getItem('nova_remembered_email');
+  const savedRemember = localStorage.getItem('nova_remember_me');
+
+  if (rememberMeCheckbox) {
+    rememberMeCheckbox.checked = savedRemember !== 'false';
+  }
+
+  if (savedEmail && emailInput) {
+    emailInput.value = savedEmail;
+    // Auto-focus password so user can just enter password and hit Enter
+    if (passwordInput) {
+      setTimeout(() => {
+        passwordInput.focus();
+      }, 150);
+    }
+  }
 
   if (toggleAuthMode) {
     toggleAuthMode.addEventListener('click', (e) => {
@@ -52,7 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         if (window.supabaseClient) {
           await window.supabaseClient.auth.resetPasswordForEmail(email, {
-            redirectTo: window.location.origin + '/login.html'
+            redirectTo: window.location.origin + window.novaPath('login.html')
           });
         }
         showToast("Password reset link sent to your email!", "success");
@@ -86,6 +124,15 @@ document.addEventListener('DOMContentLoaded', () => {
           });
           if (error) throw error;
 
+          // Handle Remember Me
+          if (rememberMeCheckbox && rememberMeCheckbox.checked) {
+            localStorage.setItem('nova_remembered_email', email);
+            localStorage.setItem('nova_remember_me', 'true');
+          } else {
+            localStorage.removeItem('nova_remembered_email');
+            localStorage.setItem('nova_remember_me', 'false');
+          }
+
           // Save local profile info immediately
           localStorage.setItem('nova_user_profile', JSON.stringify({
             full_name: fullName || 'Ashwath',
@@ -94,7 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
           showToast("Account created successfully! Redirecting...", "success");
           setTimeout(() => {
-            window.location.href = '/app.html';
+            window.location.href = window.novaPath('app.html');
           }, 1000);
         } else {
           // Sign In
@@ -104,13 +151,22 @@ document.addEventListener('DOMContentLoaded', () => {
           });
           if (error) throw error;
 
+          // Handle Remember Me
+          if (rememberMeCheckbox && rememberMeCheckbox.checked) {
+            localStorage.setItem('nova_remembered_email', email);
+            localStorage.setItem('nova_remember_me', 'true');
+          } else {
+            localStorage.removeItem('nova_remembered_email');
+            localStorage.setItem('nova_remember_me', 'false');
+          }
+
           const savedName = data.user?.user_metadata?.full_name || 'Ashwath';
           const localProfile = JSON.parse(localStorage.getItem('nova_user_profile') || '{}');
           localProfile.full_name = localProfile.full_name || savedName;
           localStorage.setItem('nova_user_profile', JSON.stringify(localProfile));
 
           showToast("Signed in successfully!", "success");
-          window.location.href = '/app.html';
+          window.location.href = window.novaPath('app.html');
         }
       } catch (err) {
         showToast(err.message || "An error occurred during authentication", "error");
@@ -128,7 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const { error } = await window.supabaseClient.auth.signInWithOAuth({
           provider: 'google',
           options: {
-            redirectTo: window.location.origin + '/app.html'
+            redirectTo: window.location.origin + window.novaPath('app.html')
           }
         });
         if (error) throw error;

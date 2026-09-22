@@ -145,8 +145,9 @@ window.novaSettings = {
       if (res.status === 403) {
         const errData = await res.json();
         alert(errData.error || 'Your account has been deactivated. Please contact support.');
+        window.isIntentionalLogout = true;
         await window.supabaseClient.auth.signOut();
-        window.location.href = '/login.html';
+        window.location.href = window.novaPath('login.html');
         return;
       }
       const data = await res.json();

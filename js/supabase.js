@@ -20,6 +20,12 @@ if (supabaseUrl !== 'YOUR_SUPABASE_URL_HERE' && supabaseUrl.includes('supabase.c
   };
 }
 
+window.NOVA_BASE_PATH = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? '' : '/NOVA-AI';
+
+window.novaPath = function(path) {
+  return `${window.NOVA_BASE_PATH}/${path.replace(/^\/+/, '')}`;
+};
+
 window.supabaseClient = supabaseInstance;
 
 // Global deactivation check on page load
@@ -80,8 +86,9 @@ window.supabaseClient = supabaseInstance;
 
         // Wait 3 seconds, log out, and redirect
         setTimeout(async () => {
+          window.isIntentionalLogout = true;
           await window.supabaseClient.auth.signOut();
-          window.location.href = '/login.html';
+          window.location.href = window.novaPath('login.html');
         }, 3000);
       }
     }
@@ -89,3 +96,53 @@ window.supabaseClient = supabaseInstance;
     console.warn("Could not check deactivation status:", err);
   }
 })();
+
+// Listen for auth state changes to handle unexpected session expiration
+if (window.supabaseClient && window.supabaseClient.auth.onAuthStateChange) {
+  window.supabaseClient.auth.onAuthStateChange((event, session) => {
+    // Ignore TOKEN_REFRESHED, INITIAL_SESSION, SIGNED_IN etc.
+    if (event === 'SIGNED_OUT' && !window.isIntentionalLogout) {
+      const overlay = document.createElement('div');
+      overlay.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+        background: rgba(10, 10, 10, 0.85); backdrop-filter: blur(12px);
+        z-index: 999999; display: flex; align-items: center; justify-content: center;
+        opacity: 0; transition: opacity 0.5s ease-in-out;
+      `;
+      
+      const card = document.createElement('div');
+      card.style.cssText = `
+        background: #111; border: 1px solid #333; border-radius: 16px;
+        padding: 40px; text-align: center; max-width: 400px;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05);
+        transform: translateY(20px); transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+      `;
+      
+      card.innerHTML = `
+        <div style="width: 64px; height: 64px; background: rgba(245, 158, 11, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px auto;">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+          </svg>
+        </div>
+        <h2 style="color: white; font-size: 20px; font-weight: 600; margin-bottom: 12px; font-family: 'Inter', sans-serif;">Session Expired</h2>
+        <p style="color: #9ca3af; font-size: 15px; line-height: 1.5; margin-bottom: 24px; font-family: 'Inter', sans-serif;">
+          For your security, your session has expired. Your current work is preserved. Please log in again to continue.
+        </p>
+        <button onclick="window.open(window.novaPath('login.html'), '_blank')" style="background: white; color: black; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; margin-bottom: 12px; width: 100%;">
+          Log In (Opens new tab)
+        </button>
+        <button onclick="window.location.reload()" style="background: transparent; color: #9ca3af; border: 1px solid #333; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; width: 100%;">
+          I've logged in, Reload
+        </button>
+      `;
+      
+      overlay.appendChild(card);
+      document.body.appendChild(overlay);
+      
+      requestAnimationFrame(() => {
+        overlay.style.opacity = '1';
+        card.style.transform = 'translateY(0)';
+      });
+    }
+  });
+}

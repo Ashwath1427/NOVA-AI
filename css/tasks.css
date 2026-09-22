@@ -1,4 +1,4 @@
-/* tasks.css */
+/* tasks.css - Premium Glassmorphic Kanban Board */
 .flex-between {
   display: flex;
   justify-content: space-between;
@@ -24,68 +24,359 @@
   flex: 1;
 }
 
+/* Kanban Board Grid */
 .task-board {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
+  gap: 20px;
+  align-items: flex-start;
+  margin-top: 20px;
 }
 
+@media (max-width: 1024px) {
+  .task-board {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Column Container */
 .task-column {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  background: rgba(18, 21, 31, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  padding: 18px;
+  min-height: 520px;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  transition: border-color 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
 }
 
-.task-column h3 {
-  font-size: 1.1rem;
+.task-column.drag-over {
+  border-color: #6366f1;
+  background: rgba(99, 102, 241, 0.08);
+  box-shadow: 0 0 25px rgba(99, 102, 241, 0.25);
+}
+
+/* Column Header */
+.task-column-header {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
+  padding-bottom: 14px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.badge {
-  background: rgba(255, 255, 255, 0.1);
-  padding: 2px 8px;
-  border-radius: var(--radius-full);
-  font-size: 0.8rem;
+.task-column-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #f1f5f9;
+  margin: 0;
 }
 
+/* Status Indicator Dots */
+.col-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.col-dot.todo {
+  background: #818cf8;
+  box-shadow: 0 0 8px rgba(129, 140, 248, 0.6);
+}
+
+.col-dot.progress {
+  background: #f59e0b;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.8);
+  animation: pulseAmber 2s infinite ease-in-out;
+}
+
+.col-dot.done {
+  background: #10b981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+}
+
+@keyframes pulseAmber {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.2); }
+}
+
+/* Badge count */
+.task-column .badge {
+  background: rgba(255, 255, 255, 0.07);
+  color: #cbd5e1;
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Task List Dropzone */
 .task-list {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  min-height: 200px;
+  flex: 1;
+  min-height: 380px;
 }
 
+/* Empty State Card */
+.task-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px 16px;
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.15);
+  margin: auto 0;
+  transition: all 0.2s ease;
+}
+
+.task-empty-state:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.empty-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.empty-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #e2e8f0;
+  margin: 0 0 4px 0;
+}
+
+.empty-desc {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+  max-width: 200px;
+  margin: 0;
+}
+
+/* Task Cards */
 .task-card {
   padding: 16px;
+  background: rgba(26, 30, 44, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
   cursor: grab;
-  transition: transform var(--transition-fast), border-color var(--transition-fast);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+  user-select: none;
 }
 
 .task-card:hover {
-  border-color: var(--border-highlight);
+  border-color: rgba(99, 102, 241, 0.4);
   transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
 }
 
+.task-card.is-dragging {
+  opacity: 0.4;
+  transform: scale(0.96);
+  cursor: grabbing;
+}
+
+/* Card Header & Title */
 .task-card h4 {
-  font-size: 1rem;
-  margin-bottom: 4px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #f8fafc;
+  line-height: 1.35;
+  margin: 0;
 }
 
 .task-card p {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-  margin-bottom: 12px;
+  font-size: 0.82rem;
+  color: #94a3b8;
+  margin: 6px 0 10px 0;
+  line-height: 1.45;
+}
+
+/* Card Actions */
+.task-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.btn-start-task {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #fbbf24;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-start-task:hover {
+  background: rgba(245, 158, 11, 0.25);
+  border-color: #f59e0b;
+  transform: translateY(-1px);
+}
+
+.btn-complete-task {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #34d399;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-complete-task:hover {
+  background: rgba(16, 185, 129, 0.25);
+  border-color: #10b981;
+  transform: translateY(-1px);
+}
+
+.btn-reopen-task {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-reopen-task:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.btn-delete-task {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #f87171;
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-delete-task:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: #ef4444;
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.btn-clear-column {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 3px 6px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.btn-clear-column:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+/* In-Progress Pill */
+.in-progress-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #fbbf24;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.pulse-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #f59e0b;
+  box-shadow: 0 0 6px #f59e0b;
+  animation: pulseAmber 1.5s infinite;
 }
 
 .task-meta {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
 }
 
-.priority-high { color: var(--error); }
-.priority-medium { color: var(--warning); }
-.priority-low { color: var(--success); }
+/* Priority colors */
+.priority-urgent {
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.priority-high {
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.priority-medium {
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.priority-low {
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}

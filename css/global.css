@@ -135,3 +135,150 @@ button {
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
+
+/* ==========================================================================
+   Interactive Component: Morphing Menu Toggle Button (Hamburger -> X)
+   ========================================================================== */
+.btn-morph-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: var(--radius-md, 8px);
+  background: transparent;
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+  color: var(--text-primary, #f8fafc);
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.btn-morph-toggle:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--border-highlight, rgba(255, 255, 255, 0.2));
+  color: var(--text-primary, #f8fafc);
+}
+
+.btn-morph-toggle svg {
+  pointer-events: none;
+  display: block;
+}
+
+.btn-morph-toggle .morph-bar {
+  transform-origin: 12px 12px;
+  transition: transform 300ms ease;
+}
+
+/* Default Hamburger bars */
+.btn-morph-toggle .morph-top {
+  transform: translateY(-7px);
+  transition-timing-function: cubic-bezier(0.5, 0.85, 0.25, 1.1);
+}
+
+.btn-morph-toggle .morph-middle {
+  transform: translateY(0);
+  transition-timing-function: cubic-bezier(0.5, 0.85, 0.25, 1.8);
+}
+
+.btn-morph-toggle .morph-bottom {
+  transform: translateY(7px);
+  transition-timing-function: cubic-bezier(0.5, 0.85, 0.25, 1.1);
+}
+
+/* Morph to "X" when aria-expanded="true" */
+.btn-morph-toggle[aria-expanded="true"] .morph-top {
+  transform: translate(0, 0) rotate(315deg);
+}
+
+.btn-morph-toggle[aria-expanded="true"] .morph-middle {
+  transform: rotate(45deg);
+}
+
+.btn-morph-toggle[aria-expanded="true"] .morph-bottom {
+  transform: translate(0, 0) rotate(135deg);
+}
+
+/* ==========================================================================
+   Interactive Component: Colorful Glowing Gradient Button (ButtonColorful)
+   ========================================================================== */
+.btn-colorful {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  padding: 0 18px;
+  border-radius: var(--radius-md, 8px);
+  background: #18181b; /* zinc-900 */
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #ffffff !important;
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  overflow: hidden;
+  text-decoration: none;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
+              border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.btn-colorful:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.28);
+  box-shadow: 0 6px 20px rgba(124, 58, 237, 0.25);
+}
+
+.btn-colorful:active {
+  transform: translateY(0);
+}
+
+/* Gradient background aura */
+.btn-colorful-glow {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, #6366f1, #a855f7, #ec4899);
+  opacity: 0.4;
+  filter: blur(10px);
+  transition: opacity 0.5s ease;
+  pointer-events: none;
+}
+
+.btn-colorful:hover .btn-colorful-glow {
+  opacity: 0.85;
+}
+
+/* Content layer inside button */
+.btn-colorful-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-colorful-content span {
+  color: #ffffff;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.btn-colorful-content svg,
+.btn-colorful-content i,
+.btn-colorful-content [data-lucide] {
+  width: 14px;
+  height: 14px;
+  color: rgba(255, 255, 255, 0.95);
+  transition: transform 0.2s ease;
+}
+
+.btn-colorful:hover .btn-colorful-content svg,
+.btn-colorful:hover .btn-colorful-content i,
+.btn-colorful:hover .btn-colorful-content [data-lucide] {
+  transform: translate(2px, -2px);
+}
+

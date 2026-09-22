@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>NOVA — AI Personal Command Center</title>
   <meta name="description" content="Plan your day, organize your projects, and let AI turn your intentions into action.">
-  <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
   
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -13,21 +13,27 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
   
   <!-- CSS -->
-  <link rel="stylesheet" href="/css/global.css">
-  <link rel="stylesheet" href="/css/landing.css">
+  <link rel="stylesheet" href="css/global.css">
+  <link rel="stylesheet" href="css/landing.css">
 </head>
 <body>
   <!-- Navigation -->
   <nav class="glass-panel navbar">
     <div class="nav-container">
       <div class="brand">
-        <img src="/assets/logo.svg" alt="NOVA Logo" height="32">
+        <img src="assets/logo.svg" alt="NOVA Logo" height="32">
       </div>
       <div class="nav-links">
         <a href="#features">Features</a>
         <a href="#how-it-works">How it Works</a>
-        <a href="/login.html" class="btn btn-outline">Log in</a>
-        <a href="/login.html" class="btn btn-primary">Get Started</a>
+        <a href="login.html" class="btn btn-outline">Log in</a>
+        <a href="login.html" class="btn-colorful" style="height:36px; padding: 0 16px;">
+          <div class="btn-colorful-glow"></div>
+          <div class="btn-colorful-content">
+            <span>Get Started</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7"/><path d="M7 7h10v10"/></svg>
+          </div>
+        </a>
       </div>
     </div>
   </nav>
@@ -39,8 +45,14 @@
       <h1 class="hero-title">Your day. Your projects.<br><span class="text-accent-gradient">One intelligent command center.</span></h1>
       <p class="hero-subtitle">Plan your day, organize your projects, and let AI turn your intentions into action.</p>
       <div class="hero-cta">
-        <a href="/login.html" class="btn btn-primary btn-large">Get Started</a>
-        <a href="#demo" class="btn btn-outline btn-large">See How It Works</a>
+        <a href="login.html" class="btn-colorful" style="height:48px; padding: 0 24px; font-size: 1rem;">
+          <div class="btn-colorful-glow"></div>
+          <div class="btn-colorful-content">
+            <span>Explore NOVA</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7"/><path d="M7 7h10v10"/></svg>
+          </div>
+        </a>
+        <a href="#features" class="btn btn-outline btn-large">See How It Works</a>
       </div>
     </div>
     
@@ -114,7 +126,7 @@
   <footer class="footer">
     <div class="footer-content">
       <div class="brand">
-        <img src="/assets/logo.svg" alt="NOVA Logo" height="24">
+        <img src="assets/logo.svg" alt="NOVA Logo" height="24">
       </div>
       <p class="text-muted">&copy; 2026 NOVA Command Center. All rights reserved.</p>
     </div>

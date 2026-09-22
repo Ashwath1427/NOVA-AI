@@ -8,6 +8,25 @@ window.novaAI = {
     this.form = document.getElementById('aiChatForm');
     this.input = document.getElementById('aiChatInput');
     
+    // Load history from localStorage
+    try {
+      const savedHistory = localStorage.getItem('nova_ai_chat_history');
+      if (savedHistory) {
+        this.history = JSON.parse(savedHistory);
+        // Clear default greeting if we have history
+        if (this.messagesContainer && this.history.length > 0) {
+          this.messagesContainer.innerHTML = '';
+          this.history.forEach(msg => {
+            const role = msg.role === 'model' ? 'ai' : msg.role;
+            const text = msg.parts[0]?.text || '';
+            this.appendMessage(text, role, false); // false = don't save again
+          });
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to load chat history", e);
+    }
+
     // Command Palette hooks
     const aiCommandInput = document.getElementById('aiCommandInput');
     const cmdInput = document.getElementById('cmdInput');
@@ -84,6 +103,14 @@ window.novaAI = {
   async sendMessage(text) {
     if (!text) return;
     
+    if (text.toLowerCase() === '/clear') {
+      this.history = [];
+      try { localStorage.removeItem('nova_ai_chat_history'); } catch(e) {}
+      this.messagesContainer.innerHTML = '<div class="ai-msg">Chat history cleared. How can I help you today?</div>';
+      this.input.value = '';
+      return;
+    }
+
     // Append to UI
     this.appendMessage(text, 'user');
     this.input.value = '';
@@ -120,14 +147,35 @@ window.novaAI = {
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.error || "Failed to communicate with NOVA AI");
+        if (errData.code === 'TRIAL_EXHAUSTED' || errData.error === 'TRIAL_EXHAUSTED' || response.status === 403) {
+          if (window.openGeminiSetupModal) {
+            window.openGeminiSetupModal(() => {
+              this.sendMessage(text);
+            });
+          }
+          this.appendMessage("✨ <strong>Free preview completed.</strong> Please connect your personal Google Gemini API key using the setup dialog to continue unlimited AI planning.", 'system');
+          return;
+        }
+        throw new Error(errData.error || errData.message || "Failed to communicate with NOVA AI");
       }
 
       const data = await response.json();
+
+      if (data.trialJustUsed) {
+        if (window.showToast) {
+          window.showToast('✨ Free trial request used! For subsequent requests, connect your free Gemini key in Settings.', 'default');
+        }
+      }
       
       // Update local history
       this.history.push({ role: "user", parts: [{ text }] });
       this.history.push({ role: "model", parts: [{ text: data.reply }] });
+      try {
+        if (this.history.length > 30) {
+          this.history = this.history.slice(this.history.length - 30);
+        }
+        localStorage.setItem('nova_ai_chat_history', JSON.stringify(this.history));
+      } catch (e) {}
 
       this.appendMessage(data.reply || "Done.", 'ai');
       

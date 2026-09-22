@@ -41,36 +41,42 @@
       
       <nav class="sidebar-nav">
         <a href="#overview" class="nav-item active" data-route="overview">
-          <i data-lucide="home"></i> Overview
+          <i data-lucide="sun"></i> Today
         </a>
         <a href="#tasks" class="nav-item" data-route="tasks">
           <i data-lucide="check-square"></i> Tasks
         </a>
-        <a href="#projects" class="nav-item" data-route="projects">
+        <a href="#projects" class="nav-item power-only" data-route="projects">
           <i data-lucide="folder"></i> Projects
         </a>
-        <a href="#planner" class="nav-item" data-route="planner">
+        <a href="#planner" class="nav-item power-only" data-route="planner">
           <i data-lucide="layout-dashboard"></i> Planner
         </a>
         <a href="#calendar" class="nav-item" data-route="calendar">
           <i data-lucide="calendar"></i> Calendar
         </a>
-        <a href="#notes" class="nav-item" data-route="notes">
+        <a href="#notes" class="nav-item power-only" data-route="notes">
           <i data-lucide="file-text"></i> Notes
         </a>
-        <a href="#habits" class="nav-item" data-route="habits">
+        <a href="#habits" class="nav-item power-only" data-route="habits">
           <i data-lucide="activity"></i> Habits
         </a>
         <a href="#ai-command" class="nav-item" data-route="ai-command">
-          <i data-lucide="sparkles"></i> AI Command
+          <i data-lucide="sparkles"></i> NOVA ✦
         </a>
-        <a href="#setup-guide" class="nav-item" data-route="setup-guide">
+        <a href="#setup-guide" class="nav-item power-only" data-route="setup-guide">
           <i data-lucide="book-open"></i> Setup Guide
         </a>
-
       </nav>
 
       <div class="sidebar-footer">
+        <div style="padding: 0 12px 10px 12px; display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-size:0.75rem; color:var(--text-muted); font-weight:600;">INTERFACE</span>
+          <button id="sidebarModeToggle" class="mode-toggle-btn" onclick="window.toggleNovaInterfaceMode()" title="Toggle Simple / Power Mode">
+            <span class="mode-dot" id="sidebarModeDot"></span>
+            <span id="sidebarModeLabel">Simple</span>
+          </button>
+        </div>
         <a href="#settings" class="nav-item" data-route="settings">
           <i data-lucide="settings"></i> Settings
         </a>
@@ -90,7 +96,13 @@
       <!-- Topbar / Search bar matching mockup -->
       <header class="topbar glass-panel" style="display:flex; justify-content:space-between; align-items:center; padding: 0 32px;">
         <div style="display:flex; align-items:center; gap:12px;">
-          <button id="sidebarToggleBtn" class="btn" style="background:transparent; padding:6px; color:var(--text-secondary);"><i data-lucide="menu" style="width:18px;height:18px;"></i></button>
+          <button id="sidebarToggleBtn" class="btn-morph-toggle" aria-expanded="false" aria-label="Toggle sidebar" title="Toggle Sidebar">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path class="morph-bar morph-top" d="M4 12L20 12" />
+              <path class="morph-bar morph-middle" d="M4 12H20" />
+              <path class="morph-bar morph-bottom" d="M4 12H20" />
+            </svg>
+          </button>
         </div>
         <div class="command-input-wrapper" style="max-width:480px; margin:0 auto;">
           <i data-lucide="search" class="ai-icon" style="color:var(--text-muted); width:16px; height:16px;"></i>
@@ -98,6 +110,13 @@
           <div class="shortcut-hint">⌘K</div>
         </div>
         <div style="display:flex; align-items:center; gap:16px;">
+          <button id="topbarAiBtn" class="btn-colorful" style="height:32px; padding:0 12px; font-size:0.8rem;" onclick="document.querySelector('[data-route=ai-command]')?.click();" title="Open NOVA AI">
+            <div class="btn-colorful-glow"></div>
+            <div class="btn-colorful-content">
+              <span>NOVA ✦</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7"/><path d="M7 7h10v10"/></svg>
+            </div>
+          </button>
           <button id="topbarNotificationBtn" class="btn" style="background:transparent; padding:6px; color:var(--text-secondary); position:relative;" title="Notifications">
             <i data-lucide="bell" style="width:18px; height:18px;"></i>
             <span style="position:absolute; top:4px; right:4px; width:6px; height:6px; border-radius:50%; background:#ef4444;"></span>
@@ -232,35 +251,69 @@
           </select>
         </div>
         
-        <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 8px 0;"></div>
-        <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: -10px;">Connect Your Tools</h3>
-        
-        <div class="form-group" style="display: flex; flex-direction: column; gap: 8px;">
-          <label class="text-secondary" style="font-size: 0.9rem;">Google Gemini API Key</label>
-          <input type="password" id="obGeminiKey" placeholder="AI core (Required)" style="background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); color: var(--text-primary); padding: 12px; border-radius: var(--radius-md);">
-        </div>
-        <div class="form-group" style="display: flex; flex-direction: column; gap: 8px;">
-          <label class="text-secondary" style="font-size: 0.9rem;">Google Calendar Secret URL</label>
-          <input type="password" id="obGcalUrl" placeholder="Optional" style="background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); color: var(--text-primary); padding: 12px; border-radius: var(--radius-md);">
-        </div>
-        <div style="display: flex; gap: 12px;">
-          <div class="form-group" style="display: flex; flex-direction: column; gap: 8px; flex: 1;">
-            <label class="text-secondary" style="font-size: 0.9rem;">Spotify Client ID</label>
-            <input type="password" id="obSpotifyId" placeholder="Optional" style="background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); color: var(--text-primary); padding: 12px; border-radius: var(--radius-md);">
-          </div>
-          <div class="form-group" style="display: flex; flex-direction: column; gap: 8px; flex: 1;">
-            <label class="text-secondary" style="font-size: 0.9rem;">Spotify Client Secret</label>
-            <input type="password" id="obSpotifySecret" placeholder="Optional" style="background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); color: var(--text-primary); padding: 12px; border-radius: var(--radius-md);">
-          </div>
-        </div>
-        <div class="form-group" style="display: flex; flex-direction: column; gap: 8px;">
-          <label class="text-secondary" style="font-size: 0.9rem;">Discord Webhook URL</label>
-          <input type="password" id="obDiscordWebhook" placeholder="Optional" style="background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); color: var(--text-primary); padding: 12px; border-radius: var(--radius-md);">
-        </div>
-        
-        <div style="display: flex; gap: 12px; margin-top: 12px;">
+        <div style="display: flex; gap: 12px; margin-top: 8px;">
           <button id="obSkipBtn" class="btn btn-outline" style="flex: 1;">Skip</button>
-          <button id="obSaveBtn" class="btn btn-primary" style="flex: 1;">Complete Setup</button>
+          <button id="obSaveBtn" class="btn btn-primary" style="flex: 1;">Get Started</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dedicated Gemini Key & BYOK Setup Modal (Shown after 1st free preview request) -->
+  <div id="geminiKeyModal" class="modal-overlay hidden" style="z-index: 1005;">
+    <div class="command-palette-modal glass-panel-elevated" style="max-width: 520px; width: 100%; border-radius: 20px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.6), 0 0 0 1px rgba(99,102,241,0.2);">
+      <div style="padding: 28px 28px 16px; background: linear-gradient(180deg, rgba(99,102,241,0.08) 0%, transparent 100%);">
+        <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 9999px; background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.3); color: #a5b4fc; font-size: 0.78rem; font-weight: 600; margin-bottom: 12px;">
+          <i data-lucide="sparkles" style="width: 14px; height: 14px;"></i> Free Preview Used
+        </div>
+        <h2 style="font-size: 1.4rem; font-weight: 700; margin: 0 0 8px 0; color: #fff;">Connect Your Free Gemini Key</h2>
+        <p style="color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5; margin: 0;">
+          You've used your 1 free AI preview! To continue enjoying <strong>unlimited, lightning-fast AI planning and chat for free</strong>, connect your personal Google Gemini key.
+        </p>
+      </div>
+
+      <div style="padding: 16px 28px 24px; display: flex; flex-direction: column; gap: 16px;">
+        <!-- 3-Step Instruction Box -->
+        <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px; font-size: 0.88rem;">
+          <div style="font-weight: 600; color: #f1f5f9; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px;">
+            Quick 3-Step Setup (Takes 30 seconds):
+          </div>
+          <div style="display: flex; align-items: flex-start; gap: 10px;">
+            <span style="background: rgba(99,102,241,0.25); color: #c7d2fe; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; flex-shrink: 0;">1</span>
+            <div>
+              Open <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" style="color: #60a5fa; font-weight: 600; text-decoration: underline;">Google AI Studio ↗</a> (100% Free, no credit card required).
+            </div>
+          </div>
+          <div style="display: flex; align-items: flex-start; gap: 10px;">
+            <span style="background: rgba(99,102,241,0.25); color: #c7d2fe; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; flex-shrink: 0;">2</span>
+            <div>
+              Click <strong>"Create API key"</strong> and copy your key (starts with <code style="background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px; color: #4ade80; font-size: 0.8rem;">AQ... or AIzaSy...</code>).
+            </div>
+          </div>
+          <div style="display: flex; align-items: flex-start; gap: 10px;">
+            <span style="background: rgba(99,102,241,0.25); color: #c7d2fe; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; flex-shrink: 0;">3</span>
+            <div>
+              Paste it below and click <strong>"Save & Continue"</strong>.
+            </div>
+          </div>
+        </div>
+
+        <!-- Input Field -->
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <label for="geminiModalKeyInput" style="font-size: 0.85rem; font-weight: 500; color: var(--text-secondary);">Your Gemini API Key</label>
+          <div style="position: relative; display: flex; align-items: center;">
+            <input type="password" id="geminiModalKeyInput" placeholder="Paste Gemini API Key here" style="width: 100%; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 12px 42px 12px 14px; border-radius: 10px; font-family: monospace; font-size: 0.88rem; outline: none; transition: border-color 0.2s;">
+            <button type="button" id="toggleGeminiModalKeyVisibility" style="position: absolute; right: 10px; background: transparent; border: none; color: var(--text-secondary); cursor: pointer; padding: 4px; display: flex; align-items: center;">
+              <i data-lucide="eye" style="width: 16px; height: 16px;"></i>
+            </button>
+          </div>
+          <span style="font-size: 0.75rem; color: var(--text-muted);">Stored securely in your private account. Never shared or visible to other users.</span>
+        </div>
+
+        <!-- Buttons -->
+        <div style="display: flex; gap: 12px; margin-top: 6px;">
+          <button type="button" id="closeGeminiModalBtn" class="btn btn-outline" style="flex: 1; padding: 10px;">Maybe Later</button>
+          <button type="button" id="saveGeminiModalKeyBtn" class="btn btn-primary" style="flex: 2; padding: 10px; font-weight: 600;">Save & Continue</button>
         </div>
       </div>
     </div>
@@ -330,121 +383,355 @@
     </div>
   </div>
 
-  <!-- Templates for Views -->
-  <template id="tpl-overview">
-    <div class="view-header flex-between" style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 24px;">
-      <div>
-        <h1 id="greeting" style="display:flex; align-items:center; gap:8px;">Good evening, Ashwath 👋</h1>
-        <p class="text-secondary">Here's what matters today.</p>
+  <!-- Brain Dump Modal (Phase 3) -->
+  <div id="brainDumpModal" class="modal-overlay hidden" style="z-index: 1005;">
+    <div class="brain-dump-modal glass-panel-elevated">
+      <div class="flex-between" style="padding-bottom: 16px; border-bottom: 1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div style="width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg, #a855f7, #6366f1); display:flex; align-items:center; justify-content:center; font-size:1.1rem; color:#fff;">
+            🧠
+          </div>
+          <div>
+            <h3 style="margin: 0; font-size: 1.2rem; font-family:'Outfit',sans-serif;">Brain Dump</h3>
+            <p class="text-secondary" style="font-size: 0.82rem; margin: 0;">Get everything out of your head. NOVA will organize it.</p>
+          </div>
+        </div>
+        <button class="btn" style="background:transparent; padding:4px;" onclick="window.closeBrainDumpModal()"><i data-lucide="x"></i></button>
       </div>
-      <button class="btn btn-outline" id="generateNewBtn" onclick="window.novaOverview?.generateNewBriefing()" style="display:flex; align-items:center; gap:8px; border-radius:var(--radius-full); font-size:0.85rem; padding:8px 16px;">
-        <i data-lucide="sparkles" class="text-accent-gradient"></i> Generate New
-      </button>
+
+      <!-- Step 1: Input Raw Text -->
+      <div id="brainDumpInputView" style="padding-top: 18px;">
+        <p style="font-size:0.88rem; color:#cbd5e1; margin-bottom:8px;">
+          Write or paste everything you need to remember. Separate items with commas or new lines:
+        </p>
+        <textarea id="brainDumpTextarea" class="brain-dump-textarea" placeholder="e.g. Finish physics homework tomorrow, study math chapter 3, call Rahul at 7, buy mom birthday gift, submit lab report..."></textarea>
+        
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px;">
+          <span style="font-size:0.8rem; color:var(--text-muted);">NOVA classifies into Tasks, Reminders & Notes</span>
+          <div style="display:flex; gap:10px;">
+            <button type="button" class="btn btn-outline" onclick="window.closeBrainDumpModal()">Cancel</button>
+            <button type="button" class="btn btn-primary" id="btnAnalyzeBrainDump" onclick="window.analyzeBrainDump()" style="display:flex; align-items:center; gap:8px;">
+              <i data-lucide="sparkles" style="width:16px; height:16px;"></i>
+              <span>Analyze & Categorize</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2: Review Screen (Never silently mutates data) -->
+      <div id="brainDumpReviewView" class="hidden" style="padding-top: 18px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+          <div style="font-weight:600; font-size:1rem; color:#fff;" id="brainDumpFoundCount">I found 5 items</div>
+          <button class="btn btn-outline" style="font-size:0.78rem; padding:4px 10px;" onclick="window.resetBrainDumpToInput()">← Edit Raw Text</button>
+        </div>
+        <div id="brainDumpResultsList" style="max-height: 320px; overflow-y: auto; display:flex; flex-direction:column; gap:8px; margin-bottom:20px; padding-right:4px;"></div>
+        
+        <div style="display:flex; justify-content:flex-end; gap:12px; border-top:1px solid var(--border-color); padding-top:16px;">
+          <button type="button" class="btn btn-outline" onclick="window.closeBrainDumpModal()">Discard</button>
+          <button type="button" class="btn btn-primary" id="btnConfirmBrainDump" onclick="window.commitBrainDumpItems()" style="display:flex; align-items:center; gap:8px; background:linear-gradient(135deg, #10b981 0%, #059669 100%);">
+            <i data-lucide="check" style="width:16px; height:16px;"></i>
+            <span>Create All Approved</span>
+          </button>
+        </div>
+      </div>
     </div>
+  </div>
 
-    <!-- 4 Quick Stat Cards matching mockup -->
-    <div class="stat-cards-grid">
-      <div class="stat-card">
-        <div class="stat-icon-wrapper tasks">✓</div>
-        <div class="stat-info">
-          <div class="stat-number" id="statTasksLeft">0</div>
-          <div class="stat-label">Tasks left</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon-wrapper projects">📁</div>
-        <div class="stat-info">
-          <div class="stat-number" id="statProjectsDeadline">0</div>
-          <div class="stat-label">Project deadline</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon-wrapper events">📅</div>
-        <div class="stat-info">
-          <div class="stat-number" id="statEventsToday">0</div>
-          <div class="stat-label">Events today</div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon-wrapper streak">🔥</div>
-        <div class="stat-info">
-          <div class="stat-number" id="statDayStreak">1</div>
-          <div class="stat-label">Day streak</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Middle Row: Ask NOVA anything... (Glowing 3D Orb Box) + Today's AI Briefing -->
-    <div class="overview-middle-grid">
-      <div class="ai-orb-card">
-        <div class="ai-orb" title="NOVA AI Core"></div>
-        <div class="ai-prompt-content">
-          <div class="ai-input-box">
-            <input type="text" id="overviewAiInput" name="nova_ai_query_overview" autocomplete="new-password" spellcheck="false" readonly onfocus="this.removeAttribute('readonly')" placeholder="Ask NOVA anything..." onkeydown="if(event.key==='Enter') window.novaOverview?.askNova(this.value)">
-            <button class="ai-submit-btn" onclick="window.novaOverview?.askNova(document.getElementById('overviewAiInput').value)"><i data-lucide="arrow-right" style="width:16px;height:16px;"></i></button>
+  <!-- I'm Overwhelmed Relief Modal (Phase 5) -->
+  <div id="overwhelmedModal" class="modal-overlay hidden" style="z-index: 1006;">
+    <div class="glass-panel-elevated" style="max-width: 580px; width: 90%; border-radius: 20px; padding: 28px; box-shadow: 0 24px 64px rgba(0,0,0,0.6);">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 16px;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div style="width:42px; height:42px; border-radius:12px; background:rgba(56, 189, 248, 0.15); border:1px solid rgba(56, 189, 248, 0.3); display:flex; align-items:center; justify-content:center; font-size:1.3rem;">
+            🧘
           </div>
-          <div class="quick-chips-row">
-            <button class="chip-btn" onclick="window.novaOverview?.askNova('Plan my day')">Plan my day</button>
-            <button class="chip-btn" onclick="window.novaOverview?.askNova('Create a task')">Create a task</button>
-            <button class="chip-btn" onclick="window.novaOverview?.askNova('Break down my project')">Break down my project</button>
-            <button class="chip-btn" onclick="window.novaOverview?.askNova('What should I work on?')">What should I work on?</button>
+          <div>
+            <h3 style="margin: 0; font-size: 1.35rem; font-family:'Outfit',sans-serif; color:#fff;">Let's simplify this.</h3>
+            <p class="text-secondary" style="font-size: 0.85rem; margin: 4px 0 0;">Take a breath. You don't have to do everything today.</p>
           </div>
         </div>
+        <button class="btn" style="background:transparent; padding:4px;" onclick="window.closeOverwhelmedModal()"><i data-lucide="x"></i></button>
       </div>
 
-      <div class="ai-briefing-card">
-        <div>
-          <div class="briefing-card-title">
-            <i data-lucide="sparkles" style="width:16px; height:16px; color:#a855f7;"></i>
-            Today's AI Briefing
-          </div>
-          <div class="briefing-card-body" id="aiBriefingContent">
-            Analyzing your command center and active tasks...
-          </div>
-        </div>
-        <button class="plan-day-btn" onclick="window.location.hash='#planner'; document.querySelector('[data-route=planner]')?.click();">
-          <i data-lucide="sparkles" style="width:14px; height:14px;"></i> Plan my day →
+      <div id="overwhelmedContent" style="margin: 20px 0;">
+        <!-- Injected dynamically -->
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border-color); padding-top:18px;">
+        <span style="font-size:0.8rem; color:var(--text-muted);">No tasks were deleted or moved.</span>
+        <button class="btn btn-outline" onclick="window.closeOverwhelmedModal(); window.location.hash='#tasks'; document.querySelector('[data-route=tasks]')?.click();">
+          View full backlog →
         </button>
       </div>
     </div>
+  </div>
 
-    <!-- Bottom Row: 3 Columns (Today's Tasks, Upcoming Events, Project Progress) -->
-    <div class="overview-bottom-grid">
-      <!-- Column 1: Today's Tasks -->
-      <div class="bottom-widget-card">
-        <div class="widget-header">
-          <span class="widget-title">Today's Tasks</span>
-          <a href="#tasks" class="widget-link">View all →</a>
+  <!-- Persistent Focus Mode Overlay (FocusForge Engine - Phase 8 & 9) -->
+  <div id="focusSessionOverlay" class="focus-overlay hidden">
+    <div class="focus-container" style="max-width: 620px;">
+      <!-- FocusForge Top Stats Bar -->
+      <div class="ff-header-bar">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:1.2rem;">🛡️</span>
+          <span style="font-weight:700; font-size:1.1rem; color:#fff; font-family:'Outfit',sans-serif;">FocusForge</span>
+          <span class="focus-state-badge" style="margin-bottom:0; padding:3px 10px; font-size:0.72rem;">
+            <span class="pulse-dot" style="background:#10b981; width:6px; height:6px;"></span>
+            <span id="focusStateLabel">LOCKED IN</span>
+          </span>
         </div>
-        <div id="overviewTasksList">
-          <div style="text-align:center; padding: 24px; color:var(--text-muted); font-size:0.85rem;">
-            Loading real tasks...
+
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div class="ff-level-wrap">
+            <span id="ffLevelName" style="font-weight:700; color:#38bdf8;">Novice</span>
+            <div class="ff-progress-bg">
+              <div class="ff-progress-fill" id="ffLevelProgress"></div>
+            </div>
+            <span id="ffPointsCount" style="color:#e2e8f0; font-weight:600;">50 pts</span>
+          </div>
+          <div class="ff-streak-badge">
+            🔥 <span id="ffStreakCount">1</span>
           </div>
         </div>
       </div>
 
-      <!-- Column 2: Upcoming Events (Syncs from Google Calendar) -->
-      <div class="bottom-widget-card">
-        <div class="widget-header">
-          <span class="widget-title">Upcoming Events</span>
-          <a href="#calendar" class="widget-link">View all →</a>
-        </div>
-        <div id="overviewEventsList">
-          <div style="text-align:center; padding: 24px; color:var(--text-muted); font-size:0.85rem;">
-            Loading calendar events...
-          </div>
+      <!-- Task Title & Objective -->
+      <h1 class="focus-task-name" id="focusTaskTitle" style="font-size: 1.85rem; margin-bottom: 4px;">Science Assignment</h1>
+      <p class="focus-objective-text" id="focusTaskObjective" style="font-size: 0.88rem; margin-bottom: 20px;">Current Focus: Deep work execution. Minimize all other distractions.</p>
+
+      <!-- FocusForge Circular Progress Ring -->
+      <div class="ff-score-ring">
+        <svg viewBox="0 0 36 36" class="ff-circular-chart">
+          <path class="ff-circle-bg"
+            d="M18 2.0845
+              a 15.9155 15.9155 0 0 1 0 31.831
+              a 15.9155 15.9155 0 0 1 0 -31.831"
+          />
+          <path class="ff-circle" id="ffProgressCircle"
+            stroke-dasharray="100, 100"
+            d="M18 2.0845
+              a 15.9155 15.9155 0 0 1 0 31.831
+              a 15.9155 15.9155 0 0 1 0 -31.831"
+          />
+        </svg>
+        <div class="ff-center-content">
+          <div class="ff-timer-time" id="focusTimerDisplay">45:00</div>
+          <div class="ff-timer-sub" id="focusTimerSub">TIME REMAINING</div>
         </div>
       </div>
 
-      <!-- Column 3: Project Progress -->
-      <div class="bottom-widget-card">
-        <div class="widget-header">
-          <span class="widget-title">Project Progress</span>
-          <a href="#projects" class="widget-link">View all →</a>
+      <!-- FocusForge Distraction Blocker Shield -->
+      <div class="ff-shield-card">
+        <div class="ff-shield-title" style="justify-content: space-between;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <i data-lucide="shield-alert" style="width:15px; height:15px; color:#ef4444;"></i>
+            <span>Distraction Shield Active</span>
+          </div>
+          <div id="ffShieldStatus" style="font-size:0.75rem; text-transform:none; font-weight:600; color:#ef4444;">
+            ● Extension Not Connected (Shield Inactive)
+          </div>
         </div>
-        <div id="overviewProjectsList">
-          <div style="text-align:center; padding: 24px; color:var(--text-muted); font-size:0.85rem;">
-            Loading projects...
+        <div class="ff-blocked-tags">
+          <span class="ff-blocked-tag">🚫 YouTube</span>
+          <span class="ff-blocked-tag">🚫 Instagram</span>
+          <span class="ff-blocked-tag">🚫 Reddit</span>
+          <span class="ff-blocked-tag">🚫 Twitter / X</span>
+          <span class="ff-blocked-tag">🚫 TikTok</span>
+          <span class="ff-blocked-tag">🚫 Netflix</span>
+          <span class="ff-blocked-tag">🚫 Discord</span>
+        </div>
+        <div class="ff-quote-text">
+          "Discipline is choosing between what you want now and what you want most." — Abraham Lincoln
+        </div>
+      </div>
+
+      <!-- FocusForge Virtual Garden 🌱 -->
+      <div class="ff-garden-card">
+        <div style="text-align:left;">
+          <div style="font-weight:700; font-size:0.86rem; color:#fff; display:flex; align-items:center; gap:6px;">
+            <span>Virtual Garden</span> <span>🌱</span>
+          </div>
+          <div style="font-size:0.75rem; color:var(--text-muted);">Sprouts grown from today's focus</div>
+        </div>
+        <div id="ffGardenContainer" class="ff-garden-grid">
+          <span class="ff-plant-emoji">🌱</span>
+          <span class="ff-plant-emoji">🌿</span>
+          <span class="ff-plant-emoji">🌻</span>
+        </div>
+      </div>
+
+      <!-- FocusForge AI Coach 🤖 -->
+      <div class="ff-coach-card">
+        <span style="font-size:1.1rem;">🤖</span>
+        <span id="ffCoachMessage">Deep work requires single-tasking. Stay focused!</span>
+      </div>
+
+      <!-- Focus Controls (No password required!) -->
+      <div class="focus-controls-row" id="focusControlsRow">
+        <button class="btn btn-outline" id="btnFocusPause" onclick="window.novaFocus?.togglePause()" style="border-radius:var(--radius-full); padding:10px 22px; font-size:0.9rem; display:flex; align-items:center; gap:8px;">
+          <i data-lucide="pause" style="width:16px; height:16px;" id="focusPauseIcon"></i>
+          <span id="focusPauseText">Pause</span>
+        </button>
+        <button class="btn btn-primary" id="btnFocusComplete" onclick="window.novaFocus?.completeSession()" style="border-radius:var(--radius-full); padding:10px 26px; font-size:0.9rem; background:linear-gradient(135deg, #10b981 0%, #059669 100%); display:flex; align-items:center; gap:8px; box-shadow:0 6px 20px rgba(16,185,129,0.4);">
+          <i data-lucide="check-circle" style="width:16px; height:16px;"></i>
+          <span>Finish & Complete</span>
+        </button>
+        <button class="btn btn-outline" onclick="window.novaFocus?.exitSession()" style="border-radius:var(--radius-full); padding:10px 18px; font-size:0.85rem; color:var(--text-muted);">
+          Exit
+        </button>
+      </div>
+
+      <!-- Post-Session Summary (Phase 9 & FocusForge Rewards) -->
+      <div id="focusSummaryCard" class="hidden glass-panel-elevated" style="margin-top: 24px; padding: 24px; text-align: center; border-radius: 18px; max-width: 500px; margin-left: auto; margin-right: auto;">
+        <div style="font-size:2.2rem; margin-bottom:6px;">🎉</div>
+        <h3 style="margin-bottom:6px; font-size:1.25rem; color:#fff;">Session Complete!</h3>
+        <p style="font-size:0.88rem; color:#cbd5e1; margin-bottom:14px;" id="focusSummaryStats">You stayed focused for 45 minutes.</p>
+        
+        <div style="display:flex; justify-content:center; gap:14px; margin-bottom:16px;">
+          <div style="background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.3); border-radius:10px; padding:8px 14px; font-size:0.85rem; color:#fbbf24; font-weight:700;">
+            ⚡ +25 Focus Points
+          </div>
+          <div style="background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.3); border-radius:10px; padding:8px 14px; font-size:0.85rem; color:#34d399; font-weight:700;">
+            🌱 1 Plant Grown
+          </div>
+        </div>
+
+        <div style="background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.25); border-radius:12px; padding:12px; margin-bottom:18px; font-size:0.85rem; color:#7dd3fc;">
+          💡 <strong>Recommended Next Step:</strong> Take a 10-minute break. Stand up, stretch, and drink water!
+        </div>
+        <div style="display:flex; justify-content:center; gap:12px;">
+          <button class="btn btn-primary" onclick="window.novaFocus?.closeOverlay()">Done for now</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Task Breakdown Modal (Phase 6) -->
+  <div id="taskBreakdownModal" class="modal-overlay hidden" style="z-index: 1007;">
+    <div class="glass-panel-elevated" style="max-width: 540px; width: 90%; border-radius: 20px; padding: 24px; box-shadow: 0 24px 64px rgba(0,0,0,0.6);">
+      <div class="flex-between" style="margin-bottom: 16px; display:flex; justify-content:space-between; align-items:center;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div style="width:36px; height:36px; border-radius:10px; background:rgba(168, 85, 247, 0.15); display:flex; align-items:center; justify-content:center; font-size:1.1rem; color:#a855f7;">
+            ⚡
+          </div>
+          <div>
+            <h3 style="margin: 0; font-size: 1.15rem; font-family:'Outfit',sans-serif;">Break Down Task</h3>
+            <p class="text-secondary" style="font-size: 0.8rem; margin: 0;">Make big objectives bite-sized and actionable</p>
+          </div>
+        </div>
+        <button class="btn" style="background:transparent; padding:4px;" onclick="document.getElementById('taskBreakdownModal').classList.add('hidden')"><i data-lucide="x"></i></button>
+      </div>
+
+      <div id="taskBreakdownBody" style="margin: 16px 0;"></div>
+
+      <div style="display:flex; justify-content:flex-end; gap:10px; border-top:1px solid var(--border-color); padding-top:16px;">
+        <button type="button" class="btn btn-outline" onclick="document.getElementById('taskBreakdownModal').classList.add('hidden')">Keep as One Task</button>
+        <button type="button" class="btn btn-primary" id="btnAcceptBreakdown" style="background:linear-gradient(135deg, #a855f7 0%, #6366f1 100%);">Apply Subtasks</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Templates for Views -->
+  <template id="tpl-overview">
+    <div class="today-view-container">
+      <!-- Header -->
+      <div class="view-header flex-between" style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 20px;">
+        <div>
+          <h1 id="greeting" style="display:flex; align-items:center; gap:8px;">Good morning, Ashwath 👋</h1>
+          <p class="text-secondary" style="font-size:0.95rem; margin-top:4px;">Here's what matters today.</p>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <button class="btn btn-outline" onclick="window.novaOverview?.loadOverview()" title="Refresh Today view" style="border-radius:var(--radius-full); font-size:0.82rem; padding:6px 14px; display:flex; align-items:center; gap:6px;">
+            <i data-lucide="refresh-cw" style="width:14px; height:14px;"></i> Refresh
+          </button>
+        </div>
+      </div>
+
+      <!-- Universal Tell NOVA Input & Action Chips (Phase 2 & 3 & 4 & 5) -->
+      <div class="today-tell-nova-bar">
+        <div class="tell-nova-input-row">
+          <i data-lucide="sparkles" class="text-accent-gradient" style="width:20px; height:20px; flex-shrink:0;"></i>
+          <input type="text" id="todayTellNovaInput" placeholder="What do you need? Tell NOVA anything... (e.g. 'Finish Physics homework tomorrow')" onkeydown="if(event.key==='Enter') window.handleTellNovaSubmit(this.value)">
+          <button class="tell-nova-submit-btn" onclick="window.handleTellNovaSubmit(document.getElementById('todayTellNovaInput').value)">
+            <span>Tell NOVA</span>
+            <i data-lucide="arrow-right" style="width:16px; height:16px;"></i>
+          </button>
+        </div>
+        <div class="tell-nova-actions-row">
+          <button class="tell-nova-chip accent" onclick="window.openBrainDumpModal()" title="Pour everything out of your head">
+            <i data-lucide="brain" style="width:14px; height:14px;"></i> Brain Dump
+          </button>
+          <button class="tell-nova-chip" onclick="window.triggerWhatShouldIDoNow()" title="Get instant recommendation for right now">
+            <i data-lucide="compass" style="width:14px; height:14px;"></i> What should I do now?
+          </button>
+          <button class="tell-nova-chip" onclick="window.triggerOverwhelmedMode()" title="Cut through backlog clutter">
+            <i data-lucide="shield-alert" style="width:14px; height:14px;"></i> I'm overwhelmed
+          </button>
+          <button class="tell-nova-chip power-only" onclick="window.location.hash='#planner'; document.querySelector('[data-route=planner]')?.click();">
+            <i data-lucide="calendar" style="width:14px; height:14px;"></i> Plan my day
+          </button>
+        </div>
+      </div>
+
+      <!-- Dynamic Recommendation Box (Visible when What Should I Do Now is active) -->
+      <div id="whatShouldIDoNowBox" class="what-now-box hidden"></div>
+
+      <!-- Today Main Grid (Phase 1 & 11) -->
+      <div class="today-layout-grid">
+        <!-- Left Column: Hero Focus & Next Up -->
+        <div class="today-primary-col">
+          <!-- Hero Focus Card -->
+          <div class="hero-focus-card" id="heroFocusCard">
+            <div class="focus-card-tag">
+              <span class="pulse-dot"></span>
+              YOUR FOCUS
+            </div>
+            <div id="heroFocusContent">
+              <div style="padding: 24px 0; color: var(--text-muted); font-size: 0.9rem;">
+                Evaluating your schedule and tasks...
+              </div>
+            </div>
+          </div>
+
+          <!-- Next Queue Section -->
+          <div class="today-sub-card" style="margin-top: 20px;">
+            <div class="today-sub-header">
+              <span class="today-sub-title"><i data-lucide="arrow-down-circle" style="width:14px; height:14px; display:inline; vertical-align:-2px; margin-right:6px; color:#38bdf8;"></i> Next in Queue</span>
+              <a href="#tasks" class="widget-link">View all tasks →</a>
+            </div>
+            <div id="todayNextQueueList">
+              <div style="padding: 14px 0; color: var(--text-muted); font-size: 0.85rem;">
+                Loading next tasks...
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Upcoming Calendar Commitments & Project Focus -->
+        <div class="today-subsections-col">
+          <!-- Upcoming Events -->
+          <div class="today-sub-card" id="todayUpcomingCard">
+            <div class="today-sub-header">
+              <span class="today-sub-title"><i data-lucide="calendar" style="width:14px; height:14px; display:inline; vertical-align:-2px; margin-right:6px; color:#a855f7;"></i> Upcoming Today</span>
+              <a href="#calendar" class="widget-link">Calendar →</a>
+            </div>
+            <div id="todayUpcomingEventsList">
+              <div style="padding: 14px 0; color: var(--text-muted); font-size: 0.85rem;">
+                Checking calendar...
+              </div>
+            </div>
+          </div>
+
+          <!-- Active Projects Snapshot (Power Mode) -->
+          <div class="today-sub-card power-only" id="todayProjectsCard">
+            <div class="today-sub-header">
+              <span class="today-sub-title"><i data-lucide="folder" style="width:14px; height:14px; display:inline; vertical-align:-2px; margin-right:6px; color:#10b981;"></i> Active Projects</span>
+              <a href="#projects" class="widget-link">Projects →</a>
+            </div>
+            <div id="todayProjectsSnapshotList">
+              <div style="padding: 14px 0; color: var(--text-muted); font-size: 0.85rem;">
+                Loading active projects...
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -518,17 +805,34 @@
     </div>
 
     <div class="task-board">
-      <div class="task-column">
-        <h3>To Do <span class="badge" id="countTodo">0</span></h3>
-        <div id="listTodo" class="task-list"></div>
+      <div class="task-column" id="colTodo">
+        <div class="task-column-header">
+          <h3 class="task-column-title"><span class="col-dot todo"></span> To Do</h3>
+          <span class="badge" id="countTodo">0</span>
+        </div>
+        <div style="margin-bottom: 12px;">
+          <input type="text" id="quickTaskInput" placeholder="+ What needs to be done? [Enter]" style="width: 100%; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); padding: 10px 14px; border-radius: var(--radius-md); color: white; font-size: 0.9rem;" onkeydown="if(event.key === 'Enter') { window.novaTasks.createQuickTask(this.value); this.value = ''; }">
+        </div>
+        <div id="listTodo" class="task-list" data-status="Todo"></div>
       </div>
-      <div class="task-column">
-        <h3>In Progress <span class="badge" id="countInProgress">0</span></h3>
-        <div id="listInProgress" class="task-list"></div>
+      <div class="task-column" id="colInProgress">
+        <div class="task-column-header">
+          <h3 class="task-column-title"><span class="col-dot progress"></span> In Progress</h3>
+          <span class="badge" id="countInProgress">0</span>
+        </div>
+        <div id="listInProgress" class="task-list" data-status="In Progress"></div>
       </div>
-      <div class="task-column">
-        <h3>Completed <span class="badge" id="countCompleted">0</span></h3>
-        <div id="listCompleted" class="task-list"></div>
+      <div class="task-column" id="colCompleted">
+        <div class="task-column-header">
+          <h3 class="task-column-title"><span class="col-dot done"></span> Completed</h3>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="badge" id="countCompleted">0</span>
+            <button type="button" id="btnClearCompleted" class="btn-clear-column" title="Clear all completed tasks" onclick="window.novaTasks?.clearAllCompleted();">
+              <i data-lucide="trash-2" style="width: 13px; height: 13px;"></i>
+            </button>
+          </div>
+        </div>
+        <div id="listCompleted" class="task-list" data-status="Completed"></div>
       </div>
     </div>
   </template>
@@ -678,8 +982,8 @@
 
             <!-- Action Controls -->
             <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-              <button id="btnCompleteHudTask" class="btn btn-primary" onclick="window.novaPlanner.completeCurrentBlock()" style="background: #16a34a; border-color: #22c55e; color: #fff; font-weight: 600; font-size: 0.85rem; padding: 8px 16px; display: flex; align-items: center; gap: 6px;">
-                <i data-lucide="check-circle" style="width: 15px; height: 15px;"></i> Mark Completed
+              <button id="btnCompleteHudTask" class="btn btn-primary" onclick="window.novaPlanner.completeCurrentBlock()" style="background: #16a34a; border-color: #22c55e; color: #fff; font-weight: 700; font-size: 0.9rem; padding: 10px 20px; display: flex; align-items: center; gap: 8px; border-radius: 8px;">
+                <i data-lucide="check" style="width: 18px; height: 18px;"></i> DONE
               </button>
               <button class="btn btn-secondary" onclick="window.novaPlanner.skipCurrentBlock()" style="font-size: 0.85rem; padding: 8px 14px; display: flex; align-items: center; gap: 6px;">
                 <i data-lucide="skip-forward" style="width: 14px; height: 14px;"></i> Next Block
@@ -1168,7 +1472,7 @@
             <div style="display: flex; flex-direction: column; gap: 10px;">
               <div>
                 <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px; font-weight: 500;">Gemini API Key</label>
-                <input type="password" id="devGeminiApiKey" placeholder="AIzaSy..." style="width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: #fff; padding: 9px 12px; border-radius: 8px; font-size: 0.85rem; box-sizing: border-box;">
+                <input type="password" id="devGeminiApiKey" placeholder="Your Gemini API Key" style="width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: #fff; padding: 9px 12px; border-radius: 8px; font-size: 0.85rem; box-sizing: border-box;">
               </div>
             </div>
 
@@ -1349,7 +1653,7 @@
             <div style="display: flex; flex-direction: column; gap: 10px;">
               <div>
                 <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 4px;">Gemini API Key</label>
-                <input type="password" id="pageGeminiApiKey" placeholder="AIzaSy..." style="width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: #fff; padding: 9px 12px; border-radius: 8px; font-size: 0.85rem; box-sizing: border-box;">
+                <input type="password" id="pageGeminiApiKey" placeholder="Your Gemini API Key" style="width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--border-color); color: #fff; padding: 9px 12px; border-radius: 8px; font-size: 0.85rem; box-sizing: border-box;">
               </div>
             </div>
             <button class="btn btn-primary" onclick="window.novaSettings.saveDevCredentialsPage('gemini')" style="background: linear-gradient(135deg, #a855f7, #6366f1); border: none; color: #fff; font-weight: 700; font-size: 0.85rem; padding: 10px; margin-top: auto;">
@@ -1840,6 +2144,7 @@
   <script src="/js/calendar.js"></script>
   <script src="/js/planner.js"></script>
   <script src="/js/ai.js"></script>
+  <script src="/js/focus.js"></script>
   <script src="/js/settings.js"></script>
   <script src="/js/app.js"></script>
   

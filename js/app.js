@@ -70,7 +70,7 @@ window.novaCrud = {
   }
 };
 
-window.showToast = (message, type = 'default') => {
+window.showToast = (message, type = 'default', actionCallback = null, actionText = 'Retry') => {
   let container = document.getElementById('toast-container');
   if (!container) {
     container = document.createElement('div');
@@ -81,19 +81,37 @@ window.showToast = (message, type = 'default') => {
 
   const toast = document.createElement('div');
   const bg = type === 'error' ? 'rgba(255, 50, 50, 0.9)' : type === 'success' ? 'rgba(50, 255, 50, 0.9)' : 'rgba(30, 30, 30, 0.9)';
-  toast.style = `background: ${bg}; color: white; padding: 12px 20px; border-radius: 8px; font-size: 0.9rem; box-shadow: 0 4px 12px rgba(0,0,0,0.5); opacity: 0; transition: opacity 0.3s;`;
-  toast.textContent = message;
+  toast.style = `background: ${bg}; color: white; padding: 12px 20px; border-radius: 8px; font-size: 0.9rem; box-shadow: 0 4px 12px rgba(0,0,0,0.5); opacity: 0; transition: opacity 0.3s; display: flex; align-items: center; justify-content: space-between; gap: 12px;`;
+  
+  const textSpan = document.createElement('span');
+  textSpan.textContent = message;
+  toast.appendChild(textSpan);
+
+  let hideTimeout;
+
+  if (actionCallback) {
+    const actionBtn = document.createElement('button');
+    actionBtn.textContent = actionText;
+    actionBtn.style = 'background: rgba(255,255,255,0.2); border: none; color: white; padding: 4px 10px; border-radius: 4px; font-size: 0.8rem; cursor: pointer; font-weight: 600;';
+    actionBtn.onclick = () => {
+      if (hideTimeout) clearTimeout(hideTimeout);
+      toast.style.opacity = '0';
+      setTimeout(() => toast.remove(), 300);
+      actionCallback();
+    };
+    toast.appendChild(actionBtn);
+  }
   
   container.appendChild(toast);
   
   // Fade in
   requestAnimationFrame(() => toast.style.opacity = '1');
   
-  // Fade out and remove
-  setTimeout(() => {
+  // Fade out and remove (only if no action, or after longer delay if there is an action)
+  hideTimeout = setTimeout(() => {
     toast.style.opacity = '0';
     setTimeout(() => toast.remove(), 300);
-  }, 3000);
+  }, actionCallback ? 8000 : 3000);
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -132,6 +150,55 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     // Remove the focus stealer so that tab navigation doesn't instantly trap the user
   }
+
+  // Sidebar Toggle (Hamburger menu button with morphing animation)
+  const sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
+  if (sidebarToggleBtn) {
+    const updateToggleIconState = () => {
+      const appLayout = document.querySelector('.app-layout');
+      const sidebar = document.querySelector('.sidebar');
+      let isOpen = false;
+      if (window.innerWidth <= 768) {
+        isOpen = sidebar?.classList.contains('open') || false;
+      } else {
+        isOpen = !appLayout?.classList.contains('sidebar-collapsed');
+      }
+      // When sidebar is OPEN: aria-expanded="true" (shows "X" to close)
+      // When sidebar is CLOSED: aria-expanded="false" (shows "☰" three lines to open)
+      sidebarToggleBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      sidebarToggleBtn.setAttribute('title', isOpen ? 'Close sidebar' : 'Open sidebar');
+      sidebarToggleBtn.setAttribute('aria-label', isOpen ? 'Close sidebar' : 'Open sidebar');
+    };
+
+    // Initialize correct state on page load
+    updateToggleIconState();
+
+    sidebarToggleBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const appLayout = document.querySelector('.app-layout');
+      const sidebar = document.querySelector('.sidebar');
+      if (window.innerWidth <= 768) {
+        sidebar?.classList.toggle('open');
+      } else {
+        appLayout?.classList.toggle('sidebar-collapsed');
+      }
+      updateToggleIconState();
+    });
+
+    window.addEventListener('resize', updateToggleIconState);
+  }
+
+  // Close mobile sidebar on nav click
+  document.querySelectorAll('.sidebar-nav .nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+      if (window.innerWidth <= 768) {
+        document.querySelector('.sidebar')?.classList.remove('open');
+        sidebarToggleBtn?.setAttribute('aria-expanded', 'false');
+        sidebarToggleBtn?.setAttribute('title', 'Open sidebar');
+      }
+    });
+  });
 
   function toggleCommandPalette(forceState) {
     if (!cmdPalette) return;
@@ -172,8 +239,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (logoutBtn) {
     logoutBtn.addEventListener('click', async () => {
       try {
+        window.isIntentionalLogout = true;
         await window.supabaseClient.auth.signOut();
-        window.location.href = '/login.html';
+        window.location.href = window.novaPath('login.html?logout=true');
       } catch (err) {
         console.error("Error logging out", err);
       }
@@ -184,7 +252,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (window.location.pathname.includes('app.html')) {
     const { data: { session } } = await window.supabaseClient.auth.getSession();
     if (!session && supabaseUrl !== 'YOUR_SUPABASE_URL_HERE') { // Redirect only if real supabase is connected
-      window.location.href = '/login.html';
+      window.location.href = window.novaPath('login.html');
     } else if (session) {
       const user = session.user;
       
@@ -211,16 +279,15 @@ document.addEventListener('DOMContentLoaded', async () => {
           });
           
           document.getElementById('obSaveBtn').addEventListener('click', async () => {
-            const name = document.getElementById('obName').value;
-            const goal = document.getElementById('obGoal').value;
-            const time = document.getElementById('obTime').value;
-            
-            // API Keys
-            const geminiKey = document.getElementById('obGeminiKey')?.value?.trim();
-            const gcalUrl = document.getElementById('obGcalUrl')?.value?.trim();
-            const spotifyId = document.getElementById('obSpotifyId')?.value?.trim();
-            const spotifySecret = document.getElementById('obSpotifySecret')?.value?.trim();
-            const discordWebhook = document.getElementById('obDiscordWebhook')?.value?.trim();
+            const name = document.getElementById('obName')?.value?.trim();
+            const goal = document.getElementById('obGoal')?.value || 'Work';
+            const time = document.getElementById('obTime')?.value || 'Flexible';
+            const saveBtn = document.getElementById('obSaveBtn');
+
+            if (saveBtn) {
+              saveBtn.disabled = true;
+              saveBtn.textContent = 'Setting up...';
+            }
             
             try {
               const { error: updateError } = await window.supabaseClient
@@ -234,35 +301,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                 
               if (updateError) throw updateError;
               
-              const token = (await window.supabaseClient.auth.getSession()).data.session?.access_token;
-              
-              const saveCreds = async (payload) => {
-                if (!token) return;
-                await fetch('/api/integrations/set-credentials', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                  body: JSON.stringify(payload)
-                });
-              };
-              
-              const promises = [];
-              if (geminiKey) promises.push(saveCreds({ provider: 'gemini', apiKey: geminiKey }));
-              if (gcalUrl) promises.push(saveCreds({ provider: 'google_calendar', icalUrl: gcalUrl }));
-              if (spotifyId || spotifySecret) promises.push(saveCreds({ provider: 'spotify', clientId: spotifyId, clientSecret: spotifySecret }));
-              if (discordWebhook) promises.push(saveCreds({ provider: 'discord', botToken: discordWebhook })); // saving as botToken for webhook fallback
-              
-              await Promise.all(promises);
-              
               document.getElementById('userName').textContent = name || displayName;
               document.getElementById('userAvatar').textContent = (name || displayName).charAt(0).toUpperCase();
               obModal.classList.add('hidden');
               
-              if (window.showToast) window.showToast('Setup Complete! APIs connected.', 'success');
+              if (window.showToast) window.showToast(`Welcome to NOVA, ${name || displayName}! Your command center is ready.`, 'success');
               window.novaOverview?.loadOverview();
               
             } catch (err) {
               console.error("Error saving onboarding data:", err);
               if (window.showToast) window.showToast('Error saving profile.', 'error');
+            } finally {
+              if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Get Started';
+              }
             }
           });
         }
@@ -270,16 +323,138 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Init overview if already onboarded
         window.novaOverview?.loadOverview();
       }
+
+      // Gemini BYOK Modal Controller
+      let pendingAiRetryCallback = null;
+
+      window.openGeminiSetupModal = (retryCallback = null) => {
+        pendingAiRetryCallback = retryCallback;
+        const modal = document.getElementById('geminiKeyModal');
+        if (modal) {
+          modal.classList.remove('hidden');
+          const input = document.getElementById('geminiModalKeyInput');
+          if (input) setTimeout(() => input.focus(), 100);
+          if (window.lucide) window.lucide.createIcons();
+        }
+      };
+
+      const closeGeminiModal = () => {
+        const modal = document.getElementById('geminiKeyModal');
+        if (modal) modal.classList.add('hidden');
+      };
+
+      document.getElementById('closeGeminiModalBtn')?.addEventListener('click', closeGeminiModal);
+
+      document.getElementById('toggleGeminiModalKeyVisibility')?.addEventListener('click', () => {
+        const input = document.getElementById('geminiModalKeyInput');
+        if (!input) return;
+        input.type = input.type === 'password' ? 'text' : 'password';
+      });
+
+      document.getElementById('saveGeminiModalKeyBtn')?.addEventListener('click', async () => {
+        const input = document.getElementById('geminiModalKeyInput');
+        const saveBtn = document.getElementById('saveGeminiModalKeyBtn');
+        const key = (input?.value || '').trim();
+
+        if (!key) {
+          if (window.showToast) window.showToast('Please enter your Google Gemini API key.', 'error');
+          return;
+        }
+
+        if (key.length < 15) {
+          if (window.showToast) window.showToast('Please check your Google AI Studio key. It appears too short.', 'error');
+          return;
+        }
+
+        if (saveBtn) {
+          saveBtn.disabled = true;
+          saveBtn.textContent = 'Saving...';
+        }
+
+        try {
+          const { data: { session: currentSession } } = await window.supabaseClient.auth.getSession();
+          const token = currentSession?.access_token;
+          if (!token) throw new Error("Authentication required");
+
+          const res = await fetch('/api/integrations/set-credentials', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ provider: 'gemini', apiKey: key })
+          });
+
+          if (!res.ok) throw new Error("Failed to save key to server");
+
+          closeGeminiModal();
+          if (window.showToast) window.showToast('Gemini API key connected! Full AI unlocked.', 'success');
+
+          if (typeof pendingAiRetryCallback === 'function') {
+            const cb = pendingAiRetryCallback;
+            pendingAiRetryCallback = null;
+            cb();
+          }
+        } catch (err) {
+          console.error("Error saving Gemini key:", err);
+          if (window.showToast) window.showToast(err.message || 'Error saving key', 'error');
+        } finally {
+          if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Save & Continue';
+          }
+        }
+      });
     }
   }
 });
 
 // Overview module - 100% Real Dynamic Data (Zero Made-Up Data)
+// ============================================================
+// NOVA 2.0 — SECOND-GENERATION UX & INTELLIGENCE CONTROLLER
+// ============================================================
+
+// 1. Interface Mode Controller: Simple vs Power Mode (Phase 12)
+window.initNovaInterfaceMode = function() {
+  const saved = localStorage.getItem('nova_interface_mode') || 'simple';
+  applyNovaInterfaceMode(saved);
+};
+
+window.toggleNovaInterfaceMode = function() {
+  const current = localStorage.getItem('nova_interface_mode') || 'simple';
+  const next = current === 'simple' ? 'power' : 'simple';
+  localStorage.setItem('nova_interface_mode', next);
+  applyNovaInterfaceMode(next);
+  if (window.showToast) {
+    window.showToast(`Switched to ${next === 'simple' ? '⚡ Simple Mode' : '🚀 Power Mode'}`, 'default');
+  }
+};
+
+function applyNovaInterfaceMode(mode) {
+  document.body.classList.remove('mode-simple', 'mode-power');
+  document.body.classList.add(`mode-${mode}`);
+
+  const label = document.getElementById('sidebarModeLabel');
+  if (label) {
+    label.textContent = mode === 'simple' ? 'Simple' : 'Power';
+  }
+};
+
+// Initialize mode immediately and on DOM load
+window.initNovaInterfaceMode();
+document.addEventListener('DOMContentLoaded', () => {
+  window.initNovaInterfaceMode();
+});
+
+// 2. The New "Today" Home Experience (Phase 1 & 11)
 window.novaOverview = {
+  currentFocusTask: null,
+  currentFocusReason: '',
+
   async loadOverview() {
     if (!window.supabaseClient) return;
 
-    // 1. Dynamic Greeting with Real User Profile Name
+    // A. Dynamic Greeting with Real User Profile Name
     const greeting = document.getElementById('greeting');
     let userName = 'Ashwath';
     try {
@@ -304,7 +479,7 @@ window.novaOverview = {
       greeting.innerHTML = `${timeText}, ${userName} 👋`;
     }
 
-    // 2. Fetch Real Tasks from Supabase
+    // B. Fetch Real Tasks
     let tasks = [];
     try {
       const { data, error } = await window.supabaseClient
@@ -317,104 +492,11 @@ window.novaOverview = {
     }
 
     const activeTasks = tasks.filter(t => t.status !== 'Completed');
-    const statTasksLeft = document.getElementById('statTasksLeft');
-    if (statTasksLeft) statTasksLeft.textContent = String(activeTasks.length);
 
-    const tasksContainer = document.getElementById('overviewTasksList');
-    if (tasksContainer) {
-      if (activeTasks.length > 0) {
-        tasksContainer.innerHTML = activeTasks.map(t => {
-          const pClass = (t.priority || 'medium').toLowerCase();
-          let dateStr = 'Today';
-          if (t.due_date) {
-            const today = new Date().toISOString().split('T')[0];
-            dateStr = t.due_date === today ? 'Today' : t.due_date;
-            if (t.due_time) dateStr += `, ${t.due_time.substring(0,5)}`;
-          }
-          return `
-            <div class="task-row-item">
-              <div class="task-checkbox-custom" title="Mark complete" onclick="window.novaOverview.toggleTask('${t.id}', '${t.status}', event)"></div>
-              <div class="task-details-col">
-                <div class="task-title-text">${t.title}</div>
-                <div class="task-meta-row">
-                  <span class="priority-pill ${pClass}">${t.priority || 'Medium'}</span>
-                  <span class="text-muted">${dateStr}</span>
-                </div>
-              </div>
-            </div>
-          `;
-        }).join('');
-      } else {
-        tasksContainer.innerHTML = `
-          <div style="padding: 24px 16px; text-align: center; color: var(--text-secondary);">
-            <div style="font-size: 1.5rem; margin-bottom: 6px;">🎉</div>
-            <div style="font-weight: 600; font-size: 0.92rem; color: #f8fafc; margin-bottom: 4px;">All caught up!</div>
-            <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">No active tasks pending.</div>
-            <button class="btn btn-primary" style="font-size: 0.8rem; padding: 6px 14px; margin: 0 auto; display: flex; align-items: center; gap: 6px;" onclick="window.novaTasks?.openCreateModal()">
-              <i data-lucide="plus" style="width:14px; height:14px;"></i> New Task
-            </button>
-          </div>
-        `;
-      }
-    }
-
-    // 3. Fetch Real Projects from Supabase
-    let projects = [];
-    try {
-      const { data, error } = await window.supabaseClient
-        .from('projects')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (!error && data) projects = data;
-    } catch (e) {
-      console.warn("Could not query projects:", e);
-    }
-
-    const statProjectsDeadline = document.getElementById('statProjectsDeadline');
-    if (statProjectsDeadline) statProjectsDeadline.textContent = String(projects.length);
-
-    const projectsContainer = document.getElementById('overviewProjectsList');
-    if (projectsContainer) {
-      if (projects.length > 0) {
-        projectsContainer.innerHTML = projects.map(p => {
-          const projTasks = tasks.filter(t => t.project_id === p.id);
-          let pct = p.progress_percentage || 0;
-          if (projTasks.length > 0) {
-            const completed = projTasks.filter(t => t.status === 'Completed').length;
-            pct = Math.round((completed / projTasks.length) * 100);
-          }
-          return `
-            <div class="project-row-item">
-              <div class="project-icon-box">📁</div>
-              <div class="project-info-col">
-                <div class="project-name-row">
-                  <span>${p.name}</span>
-                  <span class="text-muted" style="font-size:0.8rem; font-weight:600;">${pct}%</span>
-                </div>
-                <div class="progress-bar-bg"><div class="progress-bar-fill" style="width: ${pct}%;"></div></div>
-              </div>
-            </div>
-          `;
-        }).join('');
-      } else {
-        projectsContainer.innerHTML = `
-          <div style="padding: 24px 16px; text-align: center; color: var(--text-secondary);">
-            <div style="font-size: 1.5rem; margin-bottom: 6px;">📁</div>
-            <div style="font-weight: 600; font-size: 0.92rem; color: #f8fafc; margin-bottom: 4px;">No active projects</div>
-            <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">Create a project to organize goals & track progress.</div>
-            <button class="btn btn-primary" style="font-size: 0.8rem; padding: 6px 14px; margin: 0 auto; display: flex; align-items: center; gap: 6px;" onclick="window.novaProjects?.openCreateModal()">
-              <i data-lucide="plus" style="width:14px; height:14px;"></i> New Project
-            </button>
-          </div>
-        `;
-      }
-    }
-
-    // 4. Fetch Real Calendar Events (Supabase + Synced Google Calendar)
+    // C. Fetch Real Calendar Events (Google Calendar + Local DB)
     let todayEvents = [];
     try {
-      const today = new Date();
-      const todayStr = today.toISOString().split('T')[0];
+      const todayStr = new Date().toISOString().split('T')[0];
       const startOfDay = todayStr + 'T00:00:00.000Z';
       const endOfDay = todayStr + 'T23:59:59.999Z';
 
@@ -425,7 +507,6 @@ window.novaOverview = {
         .lte('start_time', endOfDay)
         .order('start_time', { ascending: true });
 
-      // Merge real Google Calendar events from server API
       let gcalEvents = [];
       try {
         const { data: { session } } = await window.supabaseClient.auth.getSession();
@@ -445,61 +526,245 @@ window.novaOverview = {
             }
           }
         }
-      } catch (ge) {
-        console.warn("Could not fetch server Google Calendar events for overview:", ge);
-      }
+      } catch (ge) {}
 
       todayEvents = [...(dbEvents || []), ...gcalEvents].sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
     } catch (e) {
       console.warn("Could not query calendar events:", e);
     }
 
-    const statEventsToday = document.getElementById('statEventsToday');
-    if (statEventsToday) statEventsToday.textContent = String(todayEvents.length);
+    // D. Fetch Real Projects
+    let projects = [];
+    try {
+      const { data, error } = await window.supabaseClient
+        .from('projects')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (!error && data) projects = data;
+    } catch (e) {}
 
-    const eventsContainer = document.getElementById('overviewEventsList');
-    if (eventsContainer) {
-      if (todayEvents.length > 0) {
-        eventsContainer.innerHTML = todayEvents.map(ev => {
-          let timeStr = ev.start_time;
-          if (timeStr && timeStr.includes('T')) {
-            timeStr = new Date(ev.start_time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-          }
-          return `
-            <div class="event-row-item">
-              <span class="event-time-badge">${timeStr}</span>
-              <span class="event-title-badge">${ev.title.replace('📅 ', '').replace('Google Calendar: ', '')}</span>
-              ${ev.duration ? `<span class="event-duration-pill">${ev.duration}</span>` : ''}
-            </div>
-          `;
-        }).join('');
-      } else {
-        eventsContainer.innerHTML = `
-          <div style="padding: 24px 16px; text-align: center; color: var(--text-secondary);">
-            <div style="font-size: 1.5rem; margin-bottom: 6px;">📅</div>
-            <div style="font-weight: 600; font-size: 0.92rem; color: #f8fafc; margin-bottom: 4px;">No events today</div>
-            <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">Your schedule is clear.</div>
-            <div style="display:flex; justify-content:center; gap:8px;">
-              <button class="btn btn-primary" style="font-size:0.8rem; padding: 6px 12px;" onclick="window.novaCalendar?.openCreateModal()">+ Add Event</button>
-              <button class="btn btn-secondary" style="font-size:0.8rem; padding: 6px 12px;" onclick="window.location.hash='#settings'; document.querySelector('[data-route=settings]')?.click();">Connect Calendar</button>
-            </div>
-          </div>
-        `;
-      }
-    }
+    // E. Evaluate and Render YOUR FOCUS (Phase 1 & 11)
+    this.renderHeroFocus(activeTasks, todayEvents, projects);
 
-    // 5. Real Day Streak
-    const statDayStreak = document.getElementById('statDayStreak');
-    if (statDayStreak) {
-      const completedToday = tasks.filter(t => t.status === 'Completed').length;
-      const currentStreak = Math.max(1, completedToday > 0 ? 2 : 1);
-      statDayStreak.textContent = String(currentStreak);
-    }
+    // F. Render Next in Queue
+    this.renderNextQueue(activeTasks);
 
-    // 6. Generate Dynamic AI Briefing Based on Real Active Data
-    this.loadBriefing(userName, activeTasks, todayEvents, projects);
+    // G. Render Upcoming Calendar Commitments
+    this.renderUpcomingEvents(todayEvents);
+
+    // H. Render Active Projects (Power Mode)
+    this.renderProjectsSnapshot(projects, tasks);
 
     if (window.lucide) window.lucide.createIcons();
+  },
+
+  renderHeroFocus(activeTasks, todayEvents, projects) {
+    const container = document.getElementById('heroFocusContent');
+    if (!container) return;
+
+    if (activeTasks.length === 0) {
+      this.currentFocusTask = null;
+      container.innerHTML = `
+        <div style="padding: 16px 0; text-align: left;">
+          <div style="font-size: 1.5rem; margin-bottom: 6px;">🎉</div>
+          <div style="font-size: 1.15rem; font-weight: 700; color: #fff; margin-bottom: 4px;">All caught up for today!</div>
+          <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 16px;">
+            You have zero pending tasks. Take a well-deserved break or plan ahead.
+          </p>
+          <div style="display:flex; gap:10px;">
+            <button class="btn btn-primary" style="padding: 8px 16px; font-size: 0.85rem;" onclick="window.novaTasks?.openCreateModal()">
+              + New Task
+            </button>
+            <button class="btn btn-outline" style="padding: 8px 16px; font-size: 0.85rem;" onclick="window.openBrainDumpModal()">
+              🧠 Brain Dump
+            </button>
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    // Smart priority sorting: Overdue/Due Today > Priority > Earliest
+    const todayStr = new Date().toISOString().split('T')[0];
+    const sorted = [...activeTasks].sort((a, b) => {
+      const aDue = a.due_date === todayStr ? 2 : (a.due_date && a.due_date < todayStr ? 3 : 0);
+      const bDue = b.due_date === todayStr ? 2 : (b.due_date && b.due_date < todayStr ? 3 : 0);
+      if (aDue !== bDue) return bDue - aDue;
+
+      const pWeight = { 'high': 3, 'medium': 2, 'low': 1 };
+      const aP = pWeight[(a.priority || 'medium').toLowerCase()] || 2;
+      const bP = pWeight[(b.priority || 'medium').toLowerCase()] || 2;
+      if (aP !== bP) return bP - aP;
+
+      return new Date(a.created_at) - new Date(b.created_at);
+    });
+
+    const focus = sorted[0];
+    this.currentFocusTask = focus;
+
+    // Determine estimated duration
+    let estMin = 45;
+    if (focus.estimated_minutes) estMin = focus.estimated_minutes;
+    else if (focus.title) {
+      const match = focus.title.match(/(\d+)\s*(?:min|m\b)/i);
+      if (match) estMin = match[1];
+    }
+
+    // Determine why this was picked (Phase 11)
+    let whyReason = '';
+    const isDueToday = focus.due_date === todayStr;
+    const isOverdue = focus.due_date && focus.due_date < todayStr;
+    const isHigh = (focus.priority || '').toLowerCase() === 'high';
+
+    if (isOverdue) whyReason = `This task is overdue and needs immediate resolution (~${estMin} min).`;
+    else if (isDueToday && isHigh) whyReason = `Due today with High Priority. Finishing this first eliminates your biggest pressure point.`;
+    else if (isDueToday) whyReason = `Scheduled for today (~${estMin} min). Recommended to tackle now before upcoming commitments.`;
+    else if (isHigh) whyReason = `Marked High Priority across your backlog (~${estMin} min).`;
+    else whyReason = `Highest leverage action in your queue (~${estMin} min) to maintain momentum.`;
+
+    if (todayEvents.length > 0) {
+      const nextEv = todayEvents[0];
+      const evTime = nextEv.start_time.includes('T') ? new Date(nextEv.start_time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
+      whyReason += ` You have an open window before your next event${evTime ? ` at ${evTime}` : ''}.`;
+    }
+    this.currentFocusReason = whyReason;
+
+    const pClass = (focus.priority || 'medium').toLowerCase();
+    const pTag = isOverdue ? '⚠️ Overdue' : (isDueToday ? '🔴 Due Today' : `${focus.priority || 'Medium'} Priority`);
+
+    container.innerHTML = `
+      <div class="focus-card-title">${focus.title}</div>
+      <div class="focus-card-meta">
+        <span class="priority-pill ${pClass}">${pTag}</span>
+        <span class="text-secondary" style="font-size:0.85rem;"><i data-lucide="clock" style="width:13px; height:13px; display:inline; vertical-align:-2px; margin-right:4px;"></i> ~${estMin} min estimated</span>
+        ${focus.due_date ? `<span class="text-muted" style="font-size:0.85rem;">📅 Due: ${focus.due_date}</span>` : ''}
+      </div>
+      <div class="focus-card-actions">
+        <button class="btn-start-focus" onclick="window.startHeroFocus()">
+          <i data-lucide="play" style="width:16px; height:16px;"></i>
+          <span>Start Focus Mode</span>
+        </button>
+        <button class="btn-why-focus" onclick="window.toggleFocusWhy()">
+          <i data-lucide="help-circle" style="width:15px; height:15px;"></i>
+          <span>Why this?</span>
+        </button>
+        <button class="btn btn-outline" style="padding: 8px 12px; font-size: 0.85rem; border-radius: 12px;" onclick="window.novaOverview.toggleTask('${focus.id}', '${focus.status}')" title="Mark Complete">
+          <i data-lucide="check" style="width:15px; height:15px;"></i>
+        </button>
+      </div>
+      <div id="whyExplanationPanel" class="why-explanation-panel hidden">
+        <i data-lucide="sparkles" style="width:18px; height:18px; color:#a855f7; flex-shrink:0; margin-top:2px;"></i>
+        <div>
+          <strong>Why NOVA picked this:</strong> ${whyReason}
+        </div>
+      </div>
+    `;
+  },
+
+  renderNextQueue(activeTasks) {
+    const list = document.getElementById('todayNextQueueList');
+    if (!list) return;
+
+    // Skip the focus task
+    const remaining = this.currentFocusTask ? activeTasks.filter(t => t.id !== this.currentFocusTask.id) : activeTasks;
+
+    if (remaining.length === 0) {
+      list.innerHTML = `
+        <div style="padding: 12px 0; color: var(--text-muted); font-size: 0.85rem;">
+          No other queued tasks. When you finish your focus, you're all set!
+        </div>
+      `;
+      return;
+    }
+
+    const nextUp = remaining.slice(0, 3);
+    list.innerHTML = nextUp.map(t => {
+      const pClass = (t.priority || 'medium').toLowerCase();
+      let timeText = 'Today';
+      if (t.due_date) {
+        const today = new Date().toISOString().split('T')[0];
+        timeText = t.due_date === today ? 'Today' : t.due_date;
+      }
+      return `
+        <div class="next-task-row">
+          <div style="display:flex; align-items:center; gap:10px; overflow:hidden;">
+            <div class="task-checkbox-custom" title="Mark complete" onclick="window.novaOverview.toggleTask('${t.id}', '${t.status}', event)"></div>
+            <div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+              <div style="font-weight:600; font-size:0.9rem; color:#fff;">${t.title}</div>
+              <div style="font-size:0.75rem; color:var(--text-muted);">${timeText}</div>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span class="priority-pill ${pClass}" style="font-size:0.72rem; padding:2px 8px;">${t.priority || 'Med'}</span>
+            <button class="btn btn-outline" style="padding:4px 8px; font-size:0.75rem; border-radius:6px;" onclick="window.novaFocus?.startSession(${JSON.stringify(t).replace(/"/g, '&quot;')})" title="Focus on this task">
+              ▶
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  },
+
+  renderUpcomingEvents(todayEvents) {
+    const list = document.getElementById('todayUpcomingEventsList');
+    if (!list) return;
+
+    if (todayEvents.length === 0) {
+      list.innerHTML = `
+        <div style="padding: 14px 0; color: var(--text-secondary); font-size: 0.85rem;">
+          📅 <strong>Clear schedule today!</strong> No calendar meetings or events scheduled.
+        </div>
+      `;
+      return;
+    }
+
+    list.innerHTML = todayEvents.map(ev => {
+      let timeStr = ev.start_time;
+      if (timeStr && timeStr.includes('T')) {
+        timeStr = new Date(ev.start_time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      }
+      const titleClean = (ev.title || '').replace('📅 ', '').replace('Google Calendar: ', '');
+      return `
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.05);">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="background:rgba(168,85,247,0.15); color:#c084fc; font-size:0.75rem; font-weight:700; padding:3px 8px; border-radius:6px;">${timeStr}</span>
+            <span style="font-size:0.88rem; color:#f1f5f9; font-weight:500;">${titleClean}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+  },
+
+  renderProjectsSnapshot(projects, tasks) {
+    const list = document.getElementById('todayProjectsSnapshotList');
+    if (!list) return;
+
+    if (projects.length === 0) {
+      list.innerHTML = `
+        <div style="padding: 10px 0; color: var(--text-muted); font-size: 0.85rem;">
+          No active projects.
+        </div>
+      `;
+      return;
+    }
+
+    list.innerHTML = projects.slice(0, 3).map(p => {
+      const projTasks = tasks.filter(t => t.project_id === p.id);
+      let pct = p.progress_percentage || 0;
+      if (projTasks.length > 0) {
+        const completed = projTasks.filter(t => t.status === 'Completed').length;
+        pct = Math.round((completed / projTasks.length) * 100);
+      }
+      return `
+        <div style="margin-bottom: 12px;">
+          <div style="display:flex; justify-content:space-between; font-size:0.84rem; margin-bottom:4px;">
+            <span style="color:#fff; font-weight:600;">${p.name}</span>
+            <span style="color:var(--text-muted); font-size:0.78rem;">${pct}%</span>
+          </div>
+          <div class="progress-bar-bg" style="height:6px;"><div class="progress-bar-fill" style="width:${pct}%;"></div></div>
+        </div>
+      `;
+    }).join('');
   },
 
   async toggleTask(taskId, currentStatus, e) {
@@ -522,89 +787,343 @@ window.novaOverview = {
       }
 
       await this.loadOverview();
-      if (window.novaTasks?.loadTasks) {
-        window.novaTasks.loadTasks();
-      }
+      if (window.novaTasks?.loadTasks) window.novaTasks.loadTasks();
     } catch (err) {
       if (window.showToast) window.showToast('Failed to update task: ' + err.message, 'error');
     }
-  },
+  }
+};
 
-  async loadBriefing(userName, activeTasks, todayEvents, projects) {
-    const aiBriefingContent = document.getElementById('aiBriefingContent');
-    if (!aiBriefingContent) return;
+// 3. Actions for Hero Focus Card
+window.startHeroFocus = function() {
+  const focusTask = window.novaOverview.currentFocusTask;
+  if (focusTask && window.novaFocus) {
+    window.novaFocus.startSession(focusTask);
+  } else if (window.showToast) {
+    window.showToast('No active task to focus on. Create one first!', 'default');
+  }
+};
 
-    if (!activeTasks) activeTasks = [];
-    if (!todayEvents) todayEvents = [];
-    if (!projects) projects = [];
+window.toggleFocusWhy = function() {
+  const panel = document.getElementById('whyExplanationPanel');
+  if (panel) {
+    panel.classList.toggle('hidden');
+    if (window.lucide) window.lucide.createIcons();
+  }
+};
 
-    // Formulate real prompt
-    const taskSummary = activeTasks.length > 0
-      ? activeTasks.map(t => `"${t.title}" (${t.priority || 'Medium'} priority)`).join(', ')
-      : 'no pending tasks';
-    const eventSummary = todayEvents.length > 0
-      ? todayEvents.map(e => `"${e.title}"`).join(', ')
-      : 'no meetings';
-    const projectCount = projects.length;
+// 4. "What Should I Do Now?" Decision Engine (Phase 4)
+window.triggerWhatShouldIDoNow = async function() {
+  const box = document.getElementById('whatShouldIDoNowBox');
+  if (!box) return;
 
-    try {
-      const { data: { session } } = await window.supabaseClient.auth.getSession();
-      if (!session) {
-        aiBriefingContent.textContent = activeTasks.length > 0
-          ? `You have ${activeTasks.length} active task${activeTasks.length > 1 ? 's' : ''}: ${activeTasks[0].title}. Let's get to work!`
-          : `All caught up! You have 0 pending tasks today. Great time to plan ahead.`;
-        return;
+  const focusTask = window.novaOverview.currentFocusTask;
+  if (!focusTask) {
+    box.classList.remove('hidden');
+    box.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <div style="font-weight:700; color:#38bdf8; font-size:1rem; margin-bottom:4px;">✨ All Caught Up!</div>
+          <p style="margin:0; font-size:0.88rem; color:#cbd5e1;">You have no unfinished tasks right now. Great time for a break or a new project idea.</p>
+        </div>
+        <button class="btn btn-outline" onclick="document.getElementById('whatShouldIDoNowBox').classList.add('hidden')">Dismiss</button>
+      </div>
+    `;
+    return;
+  }
+
+  let estMin = 45;
+  if (focusTask.estimated_minutes) estMin = focusTask.estimated_minutes;
+  else if (focusTask.title) {
+    const m = focusTask.title.match(/(\d+)\s*(?:min|m\b)/i);
+    if (m) estMin = m[1];
+  }
+
+  box.classList.remove('hidden');
+  box.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px;">
+      <div>
+        <div style="display:flex; align-items:center; gap:8px; font-weight:700; color:#38bdf8; font-size:0.8rem; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px;">
+          <i data-lucide="compass" style="width:16px; height:16px;"></i>
+          RECOMMENDED ACTION RIGHT NOW
+        </div>
+        <div style="font-size:1.2rem; font-weight:700; color:#fff; margin-bottom:4px;">${focusTask.title}</div>
+        <p style="margin:0 0 14px 0; font-size:0.88rem; color:#cbd5e1; line-height:1.4;">
+          ${window.novaOverview.currentFocusReason || `Estimated ~${estMin} min. This is your highest-leverage task to move forward today.`}
+        </p>
+        <div style="display:flex; gap:10px;">
+          <button class="btn-start-focus" onclick="window.startHeroFocus()">
+            <i data-lucide="play" style="width:15px; height:15px;"></i>
+            <span>Do it Now</span>
+          </button>
+          <button class="btn btn-outline" onclick="document.getElementById('whatShouldIDoNowBox').classList.add('hidden')">
+            Choose something else
+          </button>
+        </div>
+      </div>
+      <button class="btn" style="background:transparent; padding:4px;" onclick="document.getElementById('whatShouldIDoNowBox').classList.add('hidden')">
+        <i data-lucide="x"></i>
+      </button>
+    </div>
+  `;
+  if (window.lucide) window.lucide.createIcons();
+};
+
+// 5. "I'm Overwhelmed" Relief Mode (Phase 5)
+window.triggerOverwhelmedMode = async function() {
+  const modal = document.getElementById('overwhelmedModal');
+  const content = document.getElementById('overwhelmedContent');
+  if (!modal || !content) return;
+
+  // Query active tasks
+  let activeTasks = [];
+  try {
+    const { data } = await window.supabaseClient
+      .from('tasks')
+      .select('*')
+      .neq('status', 'Completed')
+      .order('created_at', { ascending: false });
+    if (data) activeTasks = data;
+  } catch (e) {}
+
+  const totalCount = activeTasks.length;
+  if (totalCount === 0) {
+    if (window.showToast) window.showToast("You don't have any pending tasks right now! 🎉", 'default');
+    return;
+  }
+
+  // Select top 3 critical tasks only
+  const todayStr = new Date().toISOString().split('T')[0];
+  const topThree = [...activeTasks].sort((a, b) => {
+    const aDue = a.due_date === todayStr ? 2 : (a.due_date && a.due_date < todayStr ? 3 : 0);
+    const bDue = b.due_date === todayStr ? 2 : (b.due_date && b.due_date < todayStr ? 3 : 0);
+    if (aDue !== bDue) return bDue - aDue;
+    const pWeight = { 'high': 3, 'medium': 2, 'low': 1 };
+    return (pWeight[(b.priority || 'medium').toLowerCase()] || 2) - (pWeight[(a.priority || 'medium').toLowerCase()] || 2);
+  }).slice(0, 3);
+
+  content.innerHTML = `
+    <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:18px; margin-bottom:18px;">
+      <p style="font-size:0.95rem; color:#f1f5f9; margin-bottom:12px; line-height:1.5;">
+        You currently have <strong>${totalCount} unfinished items</strong>. You do <em>not</em> need to solve everything right now.
+      </p>
+      <div style="font-size:0.84rem; color:#38bdf8; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:10px;">
+        Only focus on these ${topThree.length}:
+      </div>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        ${topThree.map((t, idx) => `
+          <div style="display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,0.3); padding:12px 14px; border-radius:10px; border:1px solid rgba(255,255,255,0.07);">
+            <div>
+              <div style="font-weight:600; font-size:0.95rem; color:#fff;">${idx + 1}. ${t.title}</div>
+              <div style="font-size:0.78rem; color:var(--text-muted);">${t.due_date ? `Due: ${t.due_date}` : (t.priority || 'Medium priority')}</div>
+            </div>
+            <button class="btn btn-primary" style="padding:6px 14px; font-size:0.8rem;" onclick="window.closeOverwhelmedModal(); window.novaFocus?.startSession(${JSON.stringify(t).replace(/"/g, '&quot;')})">
+              ▶ Start
+            </button>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+    <div style="text-align:center; color:#94a3b8; font-size:0.85rem;">
+      🌿 <em>Everything else can safely wait until tomorrow.</em>
+    </div>
+  `;
+
+  modal.classList.remove('hidden');
+  if (window.lucide) window.lucide.createIcons();
+};
+
+window.closeOverwhelmedModal = function() {
+  const modal = document.getElementById('overwhelmedModal');
+  if (modal) modal.classList.add('hidden');
+};
+
+// 6. Universal "Tell NOVA" Intent Router (Phase 2)
+window.handleTellNovaSubmit = function(text) {
+  if (!text || !text.trim()) return;
+  const q = text.trim().toLowerCase();
+  const raw = text.trim();
+
+  // Route to instant engines if intent matches
+  if (q.includes('what should i do') || q.includes('what to do') || q.includes('recommend')) {
+    window.triggerWhatShouldIDoNow();
+    return;
+  }
+  if (q.includes('overwhelmed') || q.includes('too much') || q.includes('stressed') || q.includes('panic')) {
+    window.triggerOverwhelmedMode();
+    return;
+  }
+  if (q.includes('brain dump') || q.includes('dump')) {
+    window.openBrainDumpModal();
+    return;
+  }
+  if (q.includes('plan my day') || q.includes('plan today')) {
+    window.location.hash = '#planner';
+    document.querySelector('[data-route=planner]')?.click();
+    return;
+  }
+
+  // Otherwise, send to AI Assistant overlay
+  if (window.novaAI?.openAndSend) {
+    window.novaAI.openAndSend(raw);
+  }
+};
+
+// 7. Brain Dump Mode (Phase 3)
+window.brainDumpParsedItems = [];
+
+window.openBrainDumpModal = function() {
+  const modal = document.getElementById('brainDumpModal');
+  const inputView = document.getElementById('brainDumpInputView');
+  const reviewView = document.getElementById('brainDumpReviewView');
+  const textarea = document.getElementById('brainDumpTextarea');
+
+  if (inputView) inputView.classList.remove('hidden');
+  if (reviewView) reviewView.classList.add('hidden');
+  if (textarea) textarea.value = '';
+  if (modal) {
+    modal.classList.remove('hidden');
+    setTimeout(() => textarea?.focus(), 100);
+  }
+};
+
+window.closeBrainDumpModal = function() {
+  const modal = document.getElementById('brainDumpModal');
+  if (modal) modal.classList.add('hidden');
+};
+
+window.resetBrainDumpToInput = function() {
+  const inputView = document.getElementById('brainDumpInputView');
+  const reviewView = document.getElementById('brainDumpReviewView');
+  if (inputView) inputView.classList.remove('hidden');
+  if (reviewView) reviewView.classList.add('hidden');
+};
+
+window.analyzeBrainDump = function() {
+  const textarea = document.getElementById('brainDumpTextarea');
+  const rawText = textarea ? textarea.value.trim() : '';
+
+  if (!rawText) {
+    if (window.showToast) window.showToast('Please enter your thoughts or tasks first.', 'default');
+    return;
+  }
+
+  // Split lines or separated commas
+  const lines = rawText.split(/\n|,|;/).map(l => l.trim()).filter(l => l.length > 2);
+  if (lines.length === 0) {
+    if (window.showToast) window.showToast('No actionable items detected.', 'default');
+    return;
+  }
+
+  // Classify each line
+  window.brainDumpParsedItems = lines.map((item, idx) => {
+    const lower = item.toLowerCase();
+    let type = 'task';
+    let clean = item;
+    let due = null;
+
+    if (lower.startsWith('note:') || lower.includes('remember that') || lower.includes('idea:')) {
+      type = 'note';
+      clean = clean.replace(/^(note:|idea:)/i, '').trim();
+    } else if (lower.includes('remind me') || lower.includes('call ') || lower.includes('at 7') || lower.includes('at 8') || lower.includes('tomorrow')) {
+      type = 'reminder';
+      if (lower.includes('tomorrow')) {
+        const d = new Date();
+        d.setDate(d.getDate() + 1);
+        due = d.toISOString().split('T')[0];
       }
-
-      const prompt = `Write a personalized, concise 2-sentence actionable briefing for ${userName} for today.
-Real status:
-- Active Tasks (${activeTasks.length}): ${taskSummary}
-- Calendar Events (${todayEvents.length}): ${eventSummary}
-- Active Projects: ${projectCount}
-Keep it sharp, motivational, and specifically reference their top task if they have one.`;
-
-      const response = await fetch('/api/ai', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({ prompt, history: [] })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.reply) {
-          aiBriefingContent.textContent = data.reply;
-          return;
-        }
+    } else {
+      type = 'task';
+      if (lower.includes('tomorrow')) {
+        const d = new Date();
+        d.setDate(d.getDate() + 1);
+        due = d.toISOString().split('T')[0];
       }
-    } catch (e) {
-      console.warn("AI Briefing fallback active");
     }
 
-    // Smart fallback based on real data
-    if (activeTasks.length > 0) {
-      aiBriefingContent.textContent = `You have ${activeTasks.length} active task${activeTasks.length > 1 ? 's' : ''} to conquer today. Focus on "${activeTasks[0].title}" first.`;
-    } else {
-      aiBriefingContent.textContent = `Your task queue is clear today! Enjoy the focus or start planning your next milestone.`;
+    return {
+      id: idx,
+      title: clean,
+      type: type,
+      due_date: due,
+      selected: true
+    };
+  });
+
+  // Render Review Screen (Never silently mutates data without approval)
+  const countEl = document.getElementById('brainDumpFoundCount');
+  const listEl = document.getElementById('brainDumpResultsList');
+  if (countEl) countEl.textContent = `I found ${window.brainDumpParsedItems.length} items:`;
+
+  if (listEl) {
+    listEl.innerHTML = window.brainDumpParsedItems.map((item, idx) => `
+      <div class="dump-review-item">
+        <input type="checkbox" id="dumpItemCheck_${idx}" ${item.selected ? 'checked' : ''} onchange="window.brainDumpParsedItems[${idx}].selected = this.checked">
+        <span class="dump-review-tag ${item.type}">${item.type}</span>
+        <span style="flex:1; color:#fff;">${item.title}</span>
+        ${item.due_date ? `<span style="font-size:0.75rem; color:var(--text-muted);">📅 Tomorrow</span>` : ''}
+      </div>
+    `).join('');
+  }
+
+  document.getElementById('brainDumpInputView')?.classList.add('hidden');
+  document.getElementById('brainDumpReviewView')?.classList.remove('hidden');
+};
+
+window.commitBrainDumpItems = async function() {
+  const approved = window.brainDumpParsedItems.filter(i => i.selected);
+  if (approved.length === 0) {
+    if (window.showToast) window.showToast('No items selected to create.', 'default');
+    return;
+  }
+
+  const btn = document.getElementById('btnConfirmBrainDump');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+  }
+
+  try {
+    const { data: { session } } = await window.supabaseClient.auth.getSession();
+    const userId = session?.user?.id;
+
+    for (const item of approved) {
+      if (item.type === 'note') {
+        await window.supabaseClient.from('notes').insert([{
+          user_id: userId,
+          title: item.title.slice(0, 30),
+          content: item.title,
+          created_at: new Date().toISOString()
+        }]);
+      } else {
+        await window.supabaseClient.from('tasks').insert([{
+          user_id: userId,
+          title: item.title,
+          status: 'Todo',
+          priority: item.type === 'reminder' ? 'High' : 'Medium',
+          due_date: item.due_date,
+          created_at: new Date().toISOString()
+        }]);
+      }
     }
-  },
 
-  generateNewBriefing() {
-    if (window.showToast) window.showToast("Generating fresh AI briefing...", "default");
-    this.loadOverview();
-  },
+    if (window.showToast) {
+      window.showToast(`✨ Created ${approved.length} items from Brain Dump!`, 'success');
+    }
 
-  askNova(text) {
-    if (!text || !text.trim()) return;
-    if (window.novaAI?.openAndSend) {
-      window.novaAI.openAndSend(text.trim());
-    } else {
-      const input = document.getElementById('aiChatInput');
-      if (input) input.value = text.trim();
-      window.novaAI?.openChat?.();
+    window.closeBrainDumpModal();
+    if (window.novaOverview?.loadOverview) window.novaOverview.loadOverview();
+    if (window.novaTasks?.loadTasks) window.novaTasks.loadTasks();
+
+  } catch (err) {
+    console.error('Brain dump commit error:', err);
+    if (window.showToast) window.showToast('Failed to save items: ' + err.message, 'error');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Create All Approved';
     }
   }
 };
+
 

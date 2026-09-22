@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
@@ -171,7 +172,7 @@ app.get('/api/integrations/auth-url', async (req, res) => {
         provider: 'spotify'
       });
 
-      const redirectUri = `${req.protocol}://${req.get('host')}/api/integrations/spotify/callback`;
+      const redirectUri = process.env.SPOTIFY_REDIRECT_URI || `${req.protocol}://${req.get('host')}/spotify-callback`;
       const url = spotify.getAuthUrl({
         clientId,
         state,
@@ -194,7 +195,7 @@ app.get('/api/integrations/auth-url', async (req, res) => {
           error: "Discord Application / Client ID is not configured. Please add it in the API Credentials tab."
         });
       }
-      const discordRedirect = `${req.protocol}://${req.get('host')}/api/integrations/discord/callback`;
+      const discordRedirect = process.env.DISCORD_REDIRECT_URI || `${req.protocol}://${req.get('host')}/discord-callback`;
       const url = discord.getAuthUrl({ clientId: dcClientId, redirectUri: discordRedirect, state });
       return res.json({ configured: true, url, clientId: dcClientId });
     }
@@ -418,15 +419,21 @@ app.post('/api/integrations/connect-demo', async (req, res) => {
 // 4.6 Get Server & Per-User Integration Credentials (Secrets properly masked)
 app.get('/api/integrations/app-config', async (req, res) => {
   let userId = 'default_user';
+  let scopedSupabase = null;
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const token = authHeader.split(' ')[1];
     try {
       const { data } = await supabaseAdmin.auth.getUser(token);
-      if (data?.user) userId = data.user.id;
+      if (data?.user) {
+        userId = data.user.id;
+        scopedSupabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+          global: { headers: { Authorization: `Bearer ${token}` } }
+        });
+      }
     } catch (e) {}
   }
-  const creds = await integrationsStore.getAllUserCredentials(userId, `${req.protocol}://${req.get('host')}`);
+  const creds = await integrationsStore.getAllUserCredentials(userId, `${req.protocol}://${req.get('host')}`, scopedSupabase);
   res.json({
     success: true,
     config: creds,
@@ -436,15 +443,21 @@ app.get('/api/integrations/app-config', async (req, res) => {
 
 app.get('/api/integrations/user-credentials', async (req, res) => {
   let userId = 'default_user';
+  let scopedSupabase = null;
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const token = authHeader.split(' ')[1];
     try {
       const { data } = await supabaseAdmin.auth.getUser(token);
-      if (data?.user) userId = data.user.id;
+      if (data?.user) {
+        userId = data.user.id;
+        scopedSupabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+          global: { headers: { Authorization: `Bearer ${token}` } }
+        });
+      }
     } catch (e) {}
   }
-  const creds = await integrationsStore.getAllUserCredentials(userId, `${req.protocol}://${req.get('host')}`);
+  const creds = await integrationsStore.getAllUserCredentials(userId, `${req.protocol}://${req.get('host')}`, scopedSupabase);
   res.json({
     success: true,
     credentials: creds
@@ -453,20 +466,12 @@ app.get('/api/integrations/user-credentials', async (req, res) => {
 
 // 4.7 Configure API Client Credentials into per-user store and server runtime
 app.post('/api/integrations/set-credentials', async (req, res) => {
-  let user = null;
-  const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const token = authHeader.split(' ')[1];
-    try {
-      const { data } = await supabaseAdmin.auth.getUser(token);
-      user = data?.user;
-    } catch (e) {}
-  }
+  let user = await authenticateUser(req, res);
   if (!user && (req.hostname === 'localhost' || req.hostname === '127.0.0.1')) {
-    user = { id: 'default_user', email: 'admin@localhost' };
-  }
-  if (!user) {
-    return res.status(401).json({ error: "Unauthorized: Sign in required to configure credentials." });
+    // If authenticateUser failed but we are on localhost, maybe allow fallback? 
+    // Actually authenticateUser already sends a 401 response if it fails.
+    // If user is null, the response is already sent by authenticateUser. So we just return.
+    return;
   }
 
   const { provider, clientId, clientSecret, botToken, apiKey, icalUrl } = req.body;
@@ -492,7 +497,7 @@ app.post('/api/integrations/set-credentials', async (req, res) => {
     botToken,
     apiKey,
     icalUrl
-  });
+  }, req.supabase);
 
   const upper = provider.toUpperCase();
   if (clientId) process.env[`${upper}_CLIENT_ID`] = clientId.trim();
@@ -807,6 +812,14 @@ CRITICAL BEHAVIOR:
 - NEVER say "I don't have direct access to your local music library or streaming apps". You DO have direct authorized access to their connected Spotify playlist, Google Calendar, and Discord.
 - Keep your tone sharp, motivating, executive-level, and concise.`;
 
+// 8.5 Get AI Trial & BYOK status for current user
+app.get('/api/ai/trial-status', async (req, res) => {
+  const user = await authenticateUser(req, res);
+  if (!user) return;
+  const status = await integrationsStore.getAiTrialStatus(user.id);
+  res.json(status);
+});
+
 app.post('/api/ai', async (req, res) => {
   try {
     const user = await authenticateUser(req, res);
@@ -814,10 +827,41 @@ app.post('/api/ai', async (req, res) => {
 
     const { prompt, history } = req.body;
 
+    // Check trial & personal API key status
+    const trialStatus = await integrationsStore.getAiTrialStatus(user.id);
+    let activeGeminiKey = '';
+    let isTrialRequest = false;
+
+    if (trialStatus.hasOwnKey) {
+      const userCreds = await integrationsStore.getUserCredentials(user.id, 'gemini').catch(() => ({}));
+      activeGeminiKey = (userCreds?.apiKey || '').trim();
+    } else {
+      // User does not have their own key
+      if (!trialStatus.canRequest) {
+        return res.status(403).json({
+          error: "TRIAL_EXHAUSTED",
+          code: "TRIAL_EXHAUSTED",
+          message: "You've used your 1 free AI preview request! To continue enjoying unlimited AI planning and command capabilities, connect your personal Google Gemini API key."
+        });
+      }
+
+      // Allow 1 trial request using the master server key
+      activeGeminiKey = (process.env.GEMINI_API_KEY || '').trim();
+      isTrialRequest = true;
+
+      if (!activeGeminiKey || activeGeminiKey.length < 15) {
+        return res.status(403).json({
+          error: "TRIAL_EXHAUSTED",
+          code: "TRIAL_EXHAUSTED",
+          message: "Please configure your personal Google Gemini API key to use NOVA AI."
+        });
+      }
+    }
+
     // Always inject the user's authorized real context (Google Calendar, Spotify, Tasks, Projects)
     let planningContextStr = '';
     try {
-      const normContext = await contextEngine.get_full_planning_context(user.id);
+      const normContext = await contextEngine.get_full_planning_context(user.id, {}, req.supabase);
       planningContextStr = `\n\nREAL USER CONTEXT (Authorized & Normalized Real-Time Data):\n${JSON.stringify(normContext, null, 2)}`;
     } catch (err) {
       console.warn("Could not retrieve context for AI prompt:", err.message);
@@ -832,31 +876,57 @@ app.post('/api/ai', async (req, res) => {
       contents: contents
     };
 
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(geminiPayload)
-    });
-
-    const geminiData = await response.json();
-    if (geminiData.error) throw new Error(geminiData.error.message);
-
-    const candidate = geminiData.candidates?.[0];
+    // Use standard models with automatic fallback
+    const modelsToTry = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-2.5-flash'];
     let replyText = "";
-    if (candidate && candidate.content && candidate.content.parts) {
-      for (const part of candidate.content.parts) {
-        if (part.text) replyText += part.text;
+    let lastError = null;
+
+    for (const model of modelsToTry) {
+      try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${activeGeminiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(geminiPayload)
+        });
+
+        const geminiData = await response.json();
+        if (geminiData.error) {
+          lastError = new Error(geminiData.error.message || `Gemini error on ${model}`);
+          continue;
+        }
+
+        const candidate = geminiData.candidates?.[0];
+        if (candidate && candidate.content && candidate.content.parts) {
+          for (const part of candidate.content.parts) {
+            if (part.text) replyText += part.text;
+          }
+        }
+        if (replyText) break;
+      } catch (e) {
+        lastError = e;
       }
     }
 
-    res.json({ reply: replyText });
+    if (!replyText && lastError) {
+      throw lastError;
+    }
+
+    if (isTrialRequest) {
+      await integrationsStore.recordAiTrialUsage(user.id);
+    }
+
+    res.json({
+      reply: replyText || "I couldn't generate a response. Please try again.",
+      isTrialRequest,
+      trialJustUsed: isTrialRequest
+    });
   } catch (error) {
-    console.error(error);
+    console.error("AI error:", error);
     res.status(400).json({ error: error.message });
   }
 });
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`NOVA local server running at http://localhost:${PORT}`);
 });

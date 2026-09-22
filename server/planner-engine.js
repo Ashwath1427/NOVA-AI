@@ -188,41 +188,48 @@ export class PlannerEngine {
 
     // 3. Build conflict-free chronological schedule by interleaving flexible blocks into open slots
     const resultSchedule = [];
-    let currentCursorMin = Math.max(8 * 60, Math.min(this.parseTimeToMinutes(new Date().toLocaleTimeString()), 11 * 60)); // start from 8:00 AM or morning
+    const now = new Date();
+    const currentNowMin = now.getHours() * 60 + now.getMinutes();
+    const roundedNowMin = Math.ceil(currentNowMin / 5) * 5;
 
-    // If early morning before 8 AM, start at 8 AM
-    if (currentCursorMin < 8 * 60) currentCursorMin = 8 * 60;
+    // Start cursor: at least 8:00 AM (480 min). If later in the day, start at current time rounded to 5m.
+    let currentCursorMin = Math.max(8 * 60, roundedNowMin);
+    const endOfDayMin = 23 * 60 + 50; // 11:50 PM
+    if (currentCursorMin > 23 * 60) {
+      currentCursorMin = 23 * 60; // Allow late evening slots
+    }
 
     let flexIdx = 0;
-    const endOfDayMin = 22 * 60 + 30; // 10:30 PM
 
     // Add fixed events and insert flexible work in between
     for (const fe of fixedIntervals) {
-      // While there is room before this fixed event, schedule flexible tasks
-      while (flexIdx < flexibleBlocks.length && currentCursorMin + 25 <= fe.startMin) {
-        const item = flexibleBlocks[flexIdx];
-        const availBeforeFe = fe.startMin - currentCursorMin;
-        const blockDuration = Math.min(item.durationMinutes, availBeforeFe);
+      // If the fixed event is in the future relative to our cursor, fill the gap with flexible tasks
+      if (fe.startMin > currentCursorMin) {
+        while (flexIdx < flexibleBlocks.length && currentCursorMin + 20 <= fe.startMin) {
+          const item = flexibleBlocks[flexIdx];
+          const availBeforeFe = fe.startMin - currentCursorMin;
+          const blockDuration = Math.min(item.durationMinutes, availBeforeFe);
 
-        if (blockDuration >= 20) {
-          resultSchedule.push({
-            id: item.id,
-            title: item.title,
-            startTime: this.minutesToTimeString(currentCursorMin),
-            endTime: this.minutesToTimeString(currentCursorMin + blockDuration),
-            duration: `${blockDuration}m`,
-            type: item.type,
-            category: item.category,
-            notes: item.notes,
-            taskId: item.taskId,
-            spotifyFocus: item.spotifyFocus,
-            isFixed: false,
-            status: item.status
-          });
-          currentCursorMin += blockDuration + 10; // add 10m buffer/break
-          flexIdx++;
-        } else {
-          break; // not enough gap before the fixed event
+          if (blockDuration >= 20) {
+            resultSchedule.push({
+              id: item.id,
+              title: item.title,
+              startTime: this.minutesToTimeString(currentCursorMin),
+              endTime: this.minutesToTimeString(currentCursorMin + blockDuration),
+              duration: `${blockDuration}m`,
+              type: item.type,
+              category: item.category,
+              notes: item.notes,
+              taskId: item.taskId,
+              spotifyFocus: item.spotifyFocus,
+              isFixed: false,
+              status: item.status
+            });
+            currentCursorMin += blockDuration + 10; // add 10m buffer/break
+            flexIdx++;
+          } else {
+            break;
+          }
         }
       }
 
@@ -242,14 +249,16 @@ export class PlannerEngine {
         status: fe.status
       });
 
-      currentCursorMin = Math.max(currentCursorMin, fe.endMin + 10);
+      if (fe.endMin > currentCursorMin) {
+        currentCursorMin = fe.endMin + 10;
+      }
     }
 
     // After all fixed events, schedule any remaining flexible blocks until end of day
-    while (flexIdx < flexibleBlocks.length && currentCursorMin + 25 <= endOfDayMin) {
+    while (flexIdx < flexibleBlocks.length && currentCursorMin + 20 <= endOfDayMin) {
       const item = flexibleBlocks[flexIdx];
       const avail = endOfDayMin - currentCursorMin;
-      const blockDuration = Math.min(item.durationMinutes, avail);
+      const blockDuration = Math.min(item.durationMinutes, Math.max(25, avail));
 
       if (blockDuration >= 20) {
         resultSchedule.push({
@@ -316,7 +325,7 @@ export class PlannerEngine {
 
     const realHabits = context.habits || [];
     const spotifyConnected = context.audioContext && context.audioContext.connected;
-    const spotifyTracks = context.audioContext?.activePlaylist?.tracks || [];
+    const spotifyTracks = context.audioContext?.topTracks || [];
 
     // Build focused Gemini system prompt requesting strict JSON schema
     const prompt = `You are NOVA's Executive Day Planning Engine.
@@ -372,30 +381,108 @@ Current Date: ${today}. Current Time: ${new Date().toLocaleTimeString([], { hour
 
     // Call Gemini with strict JSON mode
     try {
-      const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${this.geminiApiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: {
-            responseMimeType: 'application/json',
-            temperature: 0.2
-          }
-        })
-      });
+      const activeKey = this.geminiApiKey || process.env.GEMINI_API_KEY;
+      if (activeKey && activeKey.length > 15) {
+        const models = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-2.5-flash'];
+        for (const model of models) {
+          try {
+            const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${activeKey}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [{ role: 'user', parts: [{ text: prompt }] }],
+                generationConfig: {
+                  responseMimeType: 'application/json',
+                  temperature: 0.2
+                }
+              })
+            });
 
-      if (geminiRes.ok) {
-        const geminiData = await geminiRes.json();
-        const jsonText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (jsonText) {
-          const parsed = JSON.parse(jsonText);
-          if (Array.isArray(parsed.blocks)) {
-            generatedBlocks = parsed.blocks;
+            if (geminiRes.ok) {
+              const geminiData = await geminiRes.json();
+              const jsonText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
+              if (jsonText) {
+                const parsed = JSON.parse(jsonText);
+                if (Array.isArray(parsed.blocks) && parsed.blocks.length > 0) {
+                  generatedBlocks = parsed.blocks;
+                  break;
+                }
+              }
+            }
+          } catch (mErr) {
+            // continue to next model
           }
         }
       }
     } catch (err) {
       console.warn("Gemini day planning call failed, switching to deterministic scheduler:", err.message);
+    }
+
+    // Deterministic fallback: If Gemini didn't return blocks, schedule active tasks and habits directly
+    if (generatedBlocks.length === 0) {
+      if (realTasks.length > 0) {
+        realTasks.forEach((t, idx) => {
+          let duration = 45;
+          if (t.estimated_minutes && !isNaN(t.estimated_minutes)) {
+            duration = parseInt(t.estimated_minutes, 10);
+          } else if (t.title) {
+            const m = t.title.match(/(\d+)\s*(?:min|m\b)/i);
+            if (m) duration = parseInt(m[1], 10);
+          }
+
+          generatedBlocks.push({
+            id: `blk_task_${t.id || idx}`,
+            title: t.title,
+            durationMinutes: Math.min(120, Math.max(25, duration)),
+            type: 'focus',
+            category: t.category || (t.priority === 'Urgent' ? 'Urgent Deliverable' : 'Deep Focus'),
+            notes: t.description || `Focused session on "${t.title}".`,
+            taskId: t.id || null,
+            isFixed: false,
+            spotifyFocus: spotifyConnected && spotifyTracks.length > 0 ? {
+              title: spotifyTracks[idx % spotifyTracks.length].title,
+              artist: spotifyTracks[idx % spotifyTracks.length].artist,
+              vibe: 'Deep Focus'
+            } : null
+          });
+        });
+      } else {
+        // Add a generic focus block if no tasks exist so plan is never empty
+        generatedBlocks.push({
+          id: 'blk_generic_focus',
+          title: 'Deep Focus Session',
+          durationMinutes: 60,
+          type: 'focus',
+          category: 'Deep Focus',
+          notes: 'Open focus block to work on whatever is most important.',
+          taskId: null,
+          isFixed: false,
+          spotifyFocus: spotifyConnected && spotifyTracks.length > 0 ? {
+            title: spotifyTracks[0].title,
+            artist: spotifyTracks[0].artist,
+            vibe: 'Deep Focus'
+          } : null
+        });
+      }
+
+      // Add habit/workout block if available
+      if (realHabits.length > 0) {
+        generatedBlocks.push({
+          id: `blk_habit_workout`,
+          title: `Daily Habit: ${realHabits[0].name}`,
+          durationMinutes: 45,
+          type: 'workout',
+          category: 'Workout & Fitness',
+          notes: 'Consistent daily habit and movement.',
+          taskId: null,
+          isFixed: false,
+          spotifyFocus: spotifyConnected && spotifyTracks.length > 1 ? {
+            title: spotifyTracks[1].title,
+            artist: spotifyTracks[1].artist,
+            vibe: 'Workout'
+          } : null
+        });
+      }
     }
 
     // Deterministically validate, remove overlaps, anchor fixed events

@@ -216,7 +216,8 @@ export class IntegrationsStore {
   /**
    * Saves credentials specifically for this user into Supabase (and local file as fallback)
    */
-  async saveUserCredentials(userId, provider, creds = {}) {
+  async saveUserCredentials(userId, provider, creds = {}, scopedSupabase = null) {
+    const sb = scopedSupabase || this.supabase;
     // Clean the creds - remove masked/empty values
     const cleanCreds = {};
     for (const [k, val] of Object.entries(creds)) {
@@ -227,18 +228,18 @@ export class IntegrationsStore {
 
     // Save to Supabase
     try {
-      if (this.supabase && userId && userId !== 'default_user') {
+      if (sb && userId && userId !== 'default_user') {
         // First get existing credentials to merge
-        const { data: existing } = await this.supabase
+        const { data: existing } = await sb
           .from('user_dev_credentials')
           .select('credentials')
           .eq('user_id', userId)
           .eq('provider', provider)
-          .single();
+          .maybeSingle();
 
         const mergedCreds = { ...(existing?.credentials || {}), ...cleanCreds };
 
-        await this.supabase
+        const { error: upsertErr } = await sb
           .from('user_dev_credentials')
           .upsert({
             user_id: userId,
@@ -247,7 +248,21 @@ export class IntegrationsStore {
             updated_at: new Date().toISOString()
           }, { onConflict: 'user_id,provider' });
 
-        return mergedCreds;
+        if (!upsertErr) {
+          // Mirror to local file for fast local dev caching
+          try {
+            if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+            let all = {};
+            if (fs.existsSync(USER_CREDS_FILE)) {
+              try { all = JSON.parse(fs.readFileSync(USER_CREDS_FILE, 'utf-8') || '{}'); } catch (e) {}
+            }
+            if (!all[userId]) all[userId] = {};
+            all[userId][provider] = mergedCreds;
+            fs.writeFileSync(USER_CREDS_FILE, JSON.stringify(all, null, 2), 'utf-8');
+          } catch(e) {}
+          return mergedCreds;
+        }
+        console.warn("Could not save to Supabase, falling back to local file:", upsertErr.message);
       }
     } catch (e) {
       console.warn("Could not save user credentials to Supabase:", e.message);
@@ -278,15 +293,61 @@ export class IntegrationsStore {
   }
 
   /**
+   * Check if user has personal Gemini key, or if they have remaining trial requests (1 free request allowance)
+   */
+  async getAiTrialStatus(userId) {
+    try {
+      const userCreds = await this.getUserCredentials(userId, 'gemini');
+      const hasOwnKey = !!(userCreds?.apiKey && typeof userCreds.apiKey === 'string' && userCreds.apiKey.trim().length > 15);
+      
+      if (hasOwnKey) {
+        return { hasOwnKey: true, trialUsed: false, canRequest: true, remainingTrials: 0 };
+      }
+
+      const trialData = await this.getUserCredentials(userId, 'gemini_trial');
+      const requestsCount = parseInt(trialData?.requestsCount || 0, 10);
+      const trialUsed = requestsCount >= 1;
+
+      return {
+        hasOwnKey: false,
+        trialUsed,
+        requestsCount,
+        remainingTrials: trialUsed ? 0 : 1,
+        canRequest: !trialUsed
+      };
+    } catch (e) {
+      console.warn("Error getting AI trial status:", e.message);
+      return { hasOwnKey: false, trialUsed: false, canRequest: true, remainingTrials: 1 };
+    }
+  }
+
+  /**
+   * Record that the user used their 1 free AI trial request
+   */
+  async recordAiTrialUsage(userId) {
+    try {
+      const trialData = await this.getUserCredentials(userId, 'gemini_trial');
+      const currentCount = parseInt(trialData?.requestsCount || 0, 10);
+      await this.saveUserCredentials(userId, 'gemini_trial', {
+        requestsCount: currentCount + 1,
+        lastUsedAt: new Date().toISOString()
+      });
+    } catch (e) {
+      console.warn("Error recording AI trial usage:", e.message);
+    }
+  }
+
+  /**
    * Returns all credentials for the UI with secrets properly masked
    */
-  async getAllUserCredentials(userId, baseUrl = '') {
+  async getAllUserCredentials(userId, baseUrl = '', scopedSupabase = null) {
+    const sb = scopedSupabase || this.supabase;
     let uCreds = {};
 
     // Try Supabase first (production)
     try {
-      if (this.supabase && userId) {
-        const { data, error } = await this.supabase
+      if (sb && userId) {
+        const { data, error } = await sb
           .from('user_dev_credentials')
           .select('provider, credentials')
           .eq('user_id', userId);
@@ -336,9 +397,9 @@ export class IntegrationsStore {
     const igClientId = ig.clientId || process.env.INSTAGRAM_CLIENT_ID || '';
     const igSecret = ig.clientSecret || process.env.INSTAGRAM_CLIENT_SECRET || '';
 
-    // Dynamic redirect URIs based on the current host
-    const spotifyRedirect = baseUrl ? `${baseUrl}/api/integrations/spotify/callback` : 'http://127.0.0.1:3000/api/integrations/spotify/callback';
-    const discordRedirect = baseUrl ? `${baseUrl}/api/integrations/discord/callback` : 'http://127.0.0.1:3000/api/integrations/discord/callback';
+    // Dynamic redirect URIs based on the current host or environment configuration
+    const spotifyRedirect = process.env.SPOTIFY_REDIRECT_URI || (baseUrl ? `${baseUrl}/spotify-callback` : 'http://127.0.0.1:3000/spotify-callback');
+    const discordRedirect = process.env.DISCORD_REDIRECT_URI || (baseUrl ? `${baseUrl}/discord-callback` : 'http://127.0.0.1:3000/discord-callback');
     const googleRedirect = baseUrl ? `${baseUrl}/api/auth/google/callback` : 'http://localhost:3000/api/auth/google/callback';
 
     return {

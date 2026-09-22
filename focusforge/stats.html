@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>FocusForge - Stats Dashboard</title>
+  <style>
+    :root {
+      --bg-color: #0f172a;
+      --panel-bg: rgba(30, 41, 59, 0.7);
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --accent-color: #3b82f6;
+      --success-color: #10b981;
+      --danger-color: #ef4444;
+    }
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-primary);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      padding: 40px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--bg-color);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 5px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    h1 {
+      font-size: 28px;
+      margin-bottom: 32px;
+      background: linear-gradient(to right, #3b82f6, #8b5cf6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .glass-panel {
+      background: var(--panel-bg);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    h2 {
+      font-size: 18px;
+      margin-bottom: 16px;
+      color: var(--text-primary);
+    }
+    
+    /* CSS Bar Chart */
+    .chart-container {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .bar-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .bar-label {
+      width: 120px;
+      text-align: right;
+      font-size: 14px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .bar-track {
+      flex-grow: 1;
+      height: 24px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 4px;
+      position: relative;
+    }
+    .bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-color), #8b5cf6);
+      border-radius: 4px;
+      width: 0%;
+      transition: width 1s ease-out;
+      display: flex;
+      align-items: center;
+      padding-left: 8px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    
+    /* History Table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    th {
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+    tr:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .empty-state {
+      color: var(--text-secondary);
+      text-align: center;
+      padding: 24px;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <h1>📊 Stats Dashboard</h1>
+
+  <div class="glass-panel">
+    <h2>Today's Screen Time</h2>
+    <div id="chart-container" class="chart-container">
+      <!-- Bars injected here -->
+    </div>
+  </div>
+
+  <div class="glass-panel">
+    <h2>Unlock History</h2>
+    <div style="overflow-x: auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>Date & Time</th>
+            <th>Website</th>
+            <th>Reason Given</th>
+          </tr>
+        </thead>
+        <tbody id="history-table-body">
+          <!-- Rows injected here -->
+        </tbody>
+      </table>
+    </div>
+    <div id="history-empty" class="empty-state" style="display: none;">
+      No unlocks recorded yet. Keep up the good focus!
+    </div>
+  </div>
+
+  <script src="stats.js"></script>
+</body>
+</html>

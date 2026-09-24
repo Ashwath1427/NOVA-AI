@@ -147,25 +147,14 @@ window.novaAI = {
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
-        if (errData.code === 'TRIAL_EXHAUSTED' || errData.error === 'TRIAL_EXHAUSTED' || response.status === 403) {
-          if (window.openGeminiSetupModal) {
-            window.openGeminiSetupModal(() => {
-              this.sendMessage(text);
-            });
-          }
-          this.appendMessage("✨ <strong>Free preview completed.</strong> Please connect your personal Google Gemini API key using the setup dialog to continue unlimited AI planning.", 'system');
+        if (response.status === 429) {
+          this.appendMessage(`✨ <strong>Rate Limit Reached.</strong> ${errData.error || 'You have exhausted your AI requests for today.'} <br/><br/>If you are on the <strong>Pro Max</strong> plan, you can connect your own Gemini API key in Settings for unlimited access.`, 'system');
           return;
         }
         throw new Error(errData.error || errData.message || "Failed to communicate with NOVA AI");
       }
 
       const data = await response.json();
-
-      if (data.trialJustUsed) {
-        if (window.showToast) {
-          window.showToast('✨ Free trial request used! For subsequent requests, connect your free Gemini key in Settings.', 'default');
-        }
-      }
       
       // Update local history
       this.history.push({ role: "user", parts: [{ text }] });

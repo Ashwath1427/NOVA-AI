@@ -20,14 +20,17 @@ window.novaHabits = {
         .order('completed_at', { ascending: false });
 
       // Compute Streaks & Today's Status
-      const todayStr = new Date().toISOString().split('T')[0];
+      const today = new Date();
+      const getLocalYYYYMMDD = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      
+      const todayStr = getLocalYYYYMMDD(today);
       const yesterdayDate = new Date();
       yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-      const yesterdayStr = yesterdayDate.toISOString().split('T')[0];
+      const yesterdayStr = getLocalYYYYMMDD(yesterdayDate);
 
       this.habits = (data || []).map(h => {
         const hEntries = (entries || []).filter(e => e.habit_id === h.id);
-        const uniqueDates = [...new Set(hEntries.map(e => e.completed_at.split('T')[0]))].sort().reverse();
+        const uniqueDates = [...new Set(hEntries.map(e => getLocalYYYYMMDD(new Date(e.completed_at))))].sort().reverse();
         
         let streak = 0;
         let isDoneToday = false;
@@ -37,7 +40,7 @@ window.novaHabits = {
           streak = 1;
           let checkDate = new Date(yesterdayDate);
           for (let i = 1; i < uniqueDates.length; i++) {
-            if (uniqueDates.includes(checkDate.toISOString().split('T')[0])) {
+            if (uniqueDates.includes(getLocalYYYYMMDD(checkDate))) {
               streak++;
               checkDate.setDate(checkDate.getDate() - 1);
             } else {
@@ -49,7 +52,7 @@ window.novaHabits = {
           let checkDate = new Date(yesterdayDate);
           checkDate.setDate(checkDate.getDate() - 1);
           for (let i = 1; i < uniqueDates.length; i++) {
-            if (uniqueDates.includes(checkDate.toISOString().split('T')[0])) {
+            if (uniqueDates.includes(getLocalYYYYMMDD(checkDate))) {
               streak++;
               checkDate.setDate(checkDate.getDate() - 1);
             } else {
@@ -109,10 +112,13 @@ window.novaHabits = {
       
       if (isCurrentlyDone) {
         // Un-check today (find entry and delete)
-        const todayStr = new Date().toISOString().split('T')[0];
+        const today = new Date();
+        const getLocalYYYYMMDD = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        const todayStr = getLocalYYYYMMDD(today);
+        
         const { data } = await window.supabaseClient.from('habit_entries')
           .select('id, completed_at').eq('habit_id', id);
-        const todayEntry = data?.find(e => e.completed_at.startsWith(todayStr));
+        const todayEntry = data?.find(e => getLocalYYYYMMDD(new Date(e.completed_at)) === todayStr);
         if (todayEntry) {
           await window.supabaseClient.from('habit_entries').delete().eq('id', todayEntry.id);
         }

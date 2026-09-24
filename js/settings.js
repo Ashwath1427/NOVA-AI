@@ -1670,6 +1670,11 @@ window.novaSettings = {
    * Submit credentials payload to server and refresh state
    */
   async _submitCredentials(payload, providerName) {
+    if (payload.provider === 'gemini' && window.currentPlan !== 'pro_max') {
+      if (window.showToast) window.showToast("Bring Your Own Key is a Pro Max feature.", "error");
+      return;
+    }
+    
     try {
       const token = await this.getAuthToken();
       const res = await fetch('/api/integrations/set-credentials', {

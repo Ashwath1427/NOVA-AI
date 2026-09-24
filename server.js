@@ -17,6 +17,7 @@ import { ContextEngine } from './server/context-engine.js';
 import { pkceSessionStore } from './server/pkce-session-store.js';
 import { PlannerEngine } from './server/planner-engine.js';
 import { EntitlementsService } from './server/entitlements.js';
+import { fetchWithFailover } from './server/gemini-pool.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -35,7 +36,7 @@ const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const integrationsStore = new IntegrationsStore(supabaseAdmin);
 const entitlementsService = new EntitlementsService(supabaseAdmin);
 const contextEngine = new ContextEngine(supabaseAdmin, integrationsStore, entitlementsService);
-const plannerEngine = new PlannerEngine(contextEngine, GEMINI_API_KEY, entitlementsService);
+const plannerEngine = new PlannerEngine(contextEngine, entitlementsService);
 
 // Helper to authenticate request using Supabase JWT (with localhost dev fallback)
 async function authenticateUser(req, res) {
@@ -503,10 +504,6 @@ app.post('/api/integrations/set-credentials', async (req, res) => {
   if (clientId) process.env[`${upper}_CLIENT_ID`] = clientId.trim();
   if (clientSecret) process.env[`${upper}_CLIENT_SECRET`] = clientSecret.trim();
   if (botToken) process.env[`${upper}_BOT_TOKEN`] = botToken.trim();
-  if (provider === 'gemini' && apiKey) {
-    process.env.GEMINI_API_KEY = apiKey.trim();
-    if (plannerEngine) plannerEngine.geminiApiKey = apiKey.trim();
-  }
   if (provider === 'google_calendar' && icalUrl) {
     integrationsStore.save(user.id, 'google_calendar', {
       status: 'connected',
@@ -532,7 +529,6 @@ app.post('/api/integrations/set-credentials', async (req, res) => {
     if (clientId) updateOrAppend(`${upper}_CLIENT_ID`, clientId.trim());
     if (clientSecret) updateOrAppend(`${upper}_CLIENT_SECRET`, clientSecret.trim());
     if (botToken) updateOrAppend(`${upper}_BOT_TOKEN`, botToken.trim());
-    if (provider === 'gemini' && apiKey) updateOrAppend('GEMINI_API_KEY', apiKey.trim());
 
     fs.writeFileSync(envPath, envContent.trim() + '\n', 'utf-8');
   } catch (err) {
@@ -726,14 +722,76 @@ app.get('/api/planner/today', async (req, res) => {
   }
 });
 
+// Helper functions for Rate Limiting & Usage Tracking
+async function checkAILimit(userId, actionType, req) {
+  const planData = await entitlementsService.getUserPlan(userId, req.supabase || supabaseAdmin);
+  const plan = planData.plan;
+  
+  let userCustomKey = null;
+  if (plan === 'pro_max') {
+    const creds = await integrationsStore.getUserCredentials(userId, 'gemini').catch(() => ({}));
+    if (creds && creds.apiKey && creds.apiKey.length > 15) {
+      userCustomKey = creds.apiKey.trim();
+    }
+  }
+
+  // If Pro Max with custom key, truly unlimited
+  if (userCustomKey) {
+    return { allowed: true, customKey: userCustomKey };
+  }
+
+  // Rate Limits Configuration (public keys)
+  const limits = {
+    plan_day: { free: 2, pro: 2, pro_max: 20 },
+    ai_chat: { free: 10, pro: 50, pro_max: 20 },
+    ai_briefing: { free: 1, pro: 3, pro_max: 20 }
+  };
+  
+  const limit = limits[actionType]?.[plan] || 2;
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const startOfDay = new Date(todayStr + "T00:00:00.000Z").toISOString();
+
+  // Query usage today
+  const { count, error } = await (req.supabase || supabaseAdmin)
+    .from('ai_action_logs')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('action_type', actionType)
+    .gte('created_at', startOfDay);
+
+  const usage = count || 0;
+  
+  if (usage >= limit) {
+    return { allowed: false, message: `You have reached your daily limit of ${limit} for this action on the ${plan.replace('_', ' ').toUpperCase()} plan.` };
+  }
+
+  return { allowed: true, customKey: null };
+}
+
+async function recordAIUsage(userId, actionType, req) {
+  await (req.supabase || supabaseAdmin).from('ai_action_logs').insert([{ user_id: userId, action_type: actionType }]);
+}
+
 // 8.2 One-click plan generation with deterministic validation (Idempotent)
 app.post('/api/planner/generate', async (req, res) => {
   const user = await authenticateUser(req, res);
   if (!user) return;
 
   try {
+    const limitCheck = await checkAILimit(user.id, 'plan_day', req);
+    if (!limitCheck.allowed) {
+      return res.status(429).json({ error: limitCheck.message });
+    }
+
     const force = req.body?.force === true;
-    const plan = await plannerEngine.generateDailyPlan(user.id, req.supabase || supabaseAdmin, { force });
+    const plan = await plannerEngine.generateDailyPlan(user.id, req.supabase || supabaseAdmin, { force }, limitCheck.customKey);
+    
+    // Only record usage if we actually forced or generated a new one
+    if (force || plan) {
+      await recordAIUsage(user.id, 'plan_day', req);
+    }
+
     res.json({ success: true, plan });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -746,7 +804,17 @@ app.post('/api/planner/replan', async (req, res) => {
   if (!user) return;
 
   try {
-    const updatedPlan = await plannerEngine.replanRemainingDay(user.id, req.supabase || supabaseAdmin, req.body || {});
+    const limitCheck = await checkAILimit(user.id, 'plan_day', req);
+    if (!limitCheck.allowed) {
+      return res.status(429).json({ error: limitCheck.message });
+    }
+
+    const updatedPlan = await plannerEngine.replanRemainingDay(user.id, req.supabase || supabaseAdmin, req.body || {}, limitCheck.customKey);
+    
+    if (updatedPlan) {
+      await recordAIUsage(user.id, 'plan_day', req);
+    }
+    
     res.json({ success: true, plan: updatedPlan });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -812,12 +880,10 @@ CRITICAL BEHAVIOR:
 - NEVER say "I don't have direct access to your local music library or streaming apps". You DO have direct authorized access to their connected Spotify playlist, Google Calendar, and Discord.
 - Keep your tone sharp, motivating, executive-level, and concise.`;
 
-// 8.5 Get AI Trial & BYOK status for current user
+// 8.5 Get AI limit status for UI (Removed trial logic)
 app.get('/api/ai/trial-status', async (req, res) => {
-  const user = await authenticateUser(req, res);
-  if (!user) return;
-  const status = await integrationsStore.getAiTrialStatus(user.id);
-  res.json(status);
+  // Keeping endpoint signature for UI compatibility, but returning unlimited since UI handles 429 errors now
+  res.json({ hasOwnKey: false, canRequest: true, remainingTrials: 999 });
 });
 
 app.post('/api/ai', async (req, res) => {
@@ -825,40 +891,15 @@ app.post('/api/ai', async (req, res) => {
     const user = await authenticateUser(req, res);
     if (!user) return;
 
-    const { prompt, history } = req.body;
+    const { prompt, history, isBriefing } = req.body;
+    const actionType = isBriefing ? 'ai_briefing' : 'ai_chat';
 
-    // Check trial & personal API key status
-    const trialStatus = await integrationsStore.getAiTrialStatus(user.id);
-    let activeGeminiKey = '';
-    let isTrialRequest = false;
-
-    if (trialStatus.hasOwnKey) {
-      const userCreds = await integrationsStore.getUserCredentials(user.id, 'gemini').catch(() => ({}));
-      activeGeminiKey = (userCreds?.apiKey || '').trim();
-    } else {
-      // User does not have their own key
-      if (!trialStatus.canRequest) {
-        return res.status(403).json({
-          error: "TRIAL_EXHAUSTED",
-          code: "TRIAL_EXHAUSTED",
-          message: "You've used your 1 free AI preview request! To continue enjoying unlimited AI planning and command capabilities, connect your personal Google Gemini API key."
-        });
-      }
-
-      // Allow 1 trial request using the master server key
-      activeGeminiKey = (process.env.GEMINI_API_KEY || '').trim();
-      isTrialRequest = true;
-
-      if (!activeGeminiKey || activeGeminiKey.length < 15) {
-        return res.status(403).json({
-          error: "TRIAL_EXHAUSTED",
-          code: "TRIAL_EXHAUSTED",
-          message: "Please configure your personal Google Gemini API key to use NOVA AI."
-        });
-      }
+    const limitCheck = await checkAILimit(user.id, actionType, req);
+    if (!limitCheck.allowed) {
+      return res.status(429).json({ error: limitCheck.message });
     }
 
-    // Always inject the user's authorized real context (Google Calendar, Spotify, Tasks, Projects)
+    // Always inject the user's authorized real context
     let planningContextStr = '';
     try {
       const normContext = await contextEngine.get_full_planning_context(user.id, {}, req.supabase);
@@ -876,18 +917,21 @@ app.post('/api/ai', async (req, res) => {
       contents: contents
     };
 
-    // Use standard models with automatic fallback
     const modelsToTry = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-2.5-flash'];
     let replyText = "";
     let lastError = null;
 
     for (const model of modelsToTry) {
       try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${activeGeminiKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(geminiPayload)
-        });
+        const response = await fetchWithFailover(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(geminiPayload)
+          },
+          limitCheck.customKey
+        );
 
         const geminiData = await response.json();
         if (geminiData.error) {
@@ -911,14 +955,10 @@ app.post('/api/ai', async (req, res) => {
       throw lastError;
     }
 
-    if (isTrialRequest) {
-      await integrationsStore.recordAiTrialUsage(user.id);
-    }
+    await recordAIUsage(user.id, actionType, req);
 
     res.json({
       reply: replyText || "I couldn't generate a response. Please try again.",
-      isTrialRequest,
-      trialJustUsed: isTrialRequest
     });
   } catch (error) {
     console.error("AI error:", error);

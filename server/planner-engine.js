@@ -3,10 +3,12 @@
 // Strictly validates conflicts, anchors fixed calendar commitments, enforces Supabase persistence,
 // and ensures zero mock data or overlapping intervals.
 
+import { fetchWithFailover } from './gemini-pool.js';
+
 export class PlannerEngine {
-  constructor(contextEngine, geminiApiKey) {
+  constructor(contextEngine, entitlementsService) {
     this.contextEngine = contextEngine;
-    this.geminiApiKey = geminiApiKey;
+    this.entitlementsService = entitlementsService;
   }
 
   /**
@@ -379,14 +381,14 @@ Current Date: ${today}. Current Time: ${new Date().toLocaleTimeString([], { hour
 
     let generatedBlocks = [];
 
-    // Call Gemini with strict JSON mode
+    // Call Gemini with strict JSON mode using Failover logic
     try {
-      const activeKey = this.geminiApiKey || process.env.GEMINI_API_KEY;
-      if (activeKey && activeKey.length > 15) {
-        const models = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-2.5-flash'];
-        for (const model of models) {
-          try {
-            const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${activeKey}`, {
+      const models = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-2.5-flash'];
+      for (const model of models) {
+        try {
+          const geminiRes = await fetchWithFailover(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+            {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -396,24 +398,26 @@ Current Date: ${today}. Current Time: ${new Date().toLocaleTimeString([], { hour
                   temperature: 0.2
                 }
               })
-            });
+            },
+            customKey
+          );
 
-            if (geminiRes.ok) {
-              const geminiData = await geminiRes.json();
-              const jsonText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
-              if (jsonText) {
-                const parsed = JSON.parse(jsonText);
-                if (Array.isArray(parsed.blocks) && parsed.blocks.length > 0) {
-                  generatedBlocks = parsed.blocks;
-                  break;
-                }
+          if (geminiRes && geminiRes.ok) {
+            const geminiData = await geminiRes.json();
+            const jsonText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (jsonText) {
+              const parsed = JSON.parse(jsonText);
+              if (Array.isArray(parsed.blocks) && parsed.blocks.length > 0) {
+                generatedBlocks = parsed.blocks;
+                break;
               }
             }
-          } catch (mErr) {
-            // continue to next model
           }
+        } catch (mErr) {
+          // continue to next model
         }
       }
+
     } catch (err) {
       console.warn("Gemini day planning call failed, switching to deterministic scheduler:", err.message);
     }

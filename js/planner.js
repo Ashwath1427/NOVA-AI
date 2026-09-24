@@ -247,11 +247,9 @@ window.novaPlanner = {
       const res = await generatePromise;
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}));
-        if (errJson.code === 'TRIAL_EXHAUSTED' || res.status === 403) {
-          if (window.openGeminiSetupModal) {
-            window.openGeminiSetupModal(() => {
-              this.generatePlan(force);
-            });
+        if (res.status === 429) {
+          if (window.showToast) {
+            window.showToast(`Rate Limit Reached: ${errJson.error || 'You have exhausted your plan limit.'} Upgrade to Pro Max or add a custom key in Settings.`, 'error');
           }
           return;
         }
@@ -622,7 +620,13 @@ window.novaPlanner = {
         })
       });
 
-      if (!res.ok) throw new Error("Replanning failed on server");
+      if (!res.ok) {
+        if (res.status === 429) {
+           const errJson = await res.json().catch(() => ({}));
+           throw new Error(errJson.error || "Rate Limit Reached. Upgrade to Pro Max or add a custom key in Settings.");
+        }
+        throw new Error("Replanning failed on server");
+      }
 
       const data = await res.json();
       if (data.plan && Array.isArray(data.plan.blocks)) {

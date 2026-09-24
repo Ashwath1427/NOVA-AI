@@ -308,3 +308,19 @@ SELECT id, email, raw_user_meta_data->>'full_name', 'free', 'active'
 FROM auth.users
 WHERE id NOT IN (SELECT user_id FROM public.subscriptions)
 ON CONFLICT (user_id) DO NOTHING;
+
+-- ==========================================
+-- 14. AI ACTION LOGS (Rate Limiting & Usage Tracking)
+-- ==========================================
+CREATE TABLE IF NOT EXISTS public.ai_action_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    action_type TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE public.ai_action_logs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can view their own AI action logs" ON public.ai_action_logs;
+CREATE POLICY "Users can view their own AI action logs" ON public.ai_action_logs FOR SELECT USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can insert their own AI action logs" ON public.ai_action_logs;
+CREATE POLICY "Users can insert their own AI action logs" ON public.ai_action_logs FOR INSERT WITH CHECK (auth.uid() = user_id);
+

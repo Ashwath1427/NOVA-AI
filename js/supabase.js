@@ -27,7 +27,7 @@ if (supabaseUrl !== 'YOUR_SUPABASE_URL_HERE' && supabaseUrl.includes('supabase.c
   };
 }
 
-window.NOVA_BASE_PATH = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? '' : '/NOVA-AI';
+window.NOVA_BASE_PATH = '';
 
 window.novaPath = function(path) {
   return `${window.NOVA_BASE_PATH}/${path.replace(/^\/+/, '')}`;

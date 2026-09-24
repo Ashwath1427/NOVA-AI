@@ -131,5 +131,19 @@
       <p class="text-muted">&copy; 2026 NOVA Command Center. All rights reserved.</p>
     </div>
   </footer>
+
+  <!-- Check Login Status to Auto-Redirect -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", async () => {
+      if (window.supabaseClient) {
+        const { data } = await window.supabaseClient.auth.getSession();
+        if (data && data.session) {
+          window.location.href = window.novaPath('app.html');
+        }
+      }
+    });
+  </script>
 </body>
 </html>

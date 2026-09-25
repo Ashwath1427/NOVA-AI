@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -265,6 +265,10 @@
         }
         if (window.lucide) window.lucide.createIcons();
       });
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('mode') === 'signup') {
+        toggleAuthMode.click();
+      }
     }
 
     // Interactive chips on onboarding view
@@ -328,3 +332,4 @@
   </script>
 </body>
 </html>
+
